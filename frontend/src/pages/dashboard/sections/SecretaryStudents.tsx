@@ -1,0 +1,432 @@
+﻿import { Plus, Search, Edit, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import DashboardLayout from "@/components/DashboardLayout";
+import DashboardHeader from "@/components/DashboardHeader";
+import SimpleTable from "@/components/dashboard/SimpleTable";
+import { apiGet, apiPost, apiPut, apiDelete } from "@/lib/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
+
+const studentFormSchema = z.object({
+  name: z.string().min(1, "Le nom est requis"),
+  email: z.string().email("Email invalide"),
+  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  phone: z.string().optional(),
+  class_id: z.string().optional(),
+  account_balance: z.string().min(1, "Le solde du compte est requis"),
+  payment_status: z.enum(["paid", "pending", "late"], {
+    required_error: "Le statut de paiement est requis",
+  }),
+  amount_paid: z.string().optional(),
+});
+
+type StudentFormData = z.infer<typeof studentFormSchema>;
+
+const statusStyles: Record<string, string> = {
+  Actif: "bg-success/10 text-success",
+  "En attente": "bg-warning/10 text-warning",
+};
+
+const paymentStatusLabels: Record<string, string> = {
+  paid: "Payé",
+  pending: "En attente",
+  late: "En retard",
+};
+
+interface Student {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  class_name: string | null;
+  account_balance: number;
+  payment_status: string;
+  status: string;
+  created_at: string;
+}
+
+interface StudentsResponse {
+  data: Student[];
+  total: number;
+  per_page: number;
+  current_page: number;
+}
+
+const mockStudents = [
+  { id: 1, name: "Fatima Zahra", className: "DELF B2", status: "Actif", phone: "+212 6 11 11 11 11" },
+  { id: 2, name: "Youssef Alami", className: "TOEFL", status: "Actif", phone: "+212 6 22 22 22 22" },
+  { id: 3, name: "Ahmed Mansouri", className: "TEF", status: "En attente", phone: "+212 6 33 33 33 33" },
+];
+
+export default function SecretaryStudents() {
+  const [search, setSearch] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const queryClient = useQueryClient();
+
+  const form = useForm<StudentFormData>({
+    resolver: zodResolver(studentFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      phone: "",
+      class_id: "",
+      account_balance: "0",
+      payment_status: "pending",
+      amount_paid: "",
+    },
+  });
+
+  const { data } = useQuery({
+    queryKey: ["secretary-students", search],
+    queryFn: () => apiGet<StudentsResponse>(`/secretary/students?search=${encodeURIComponent(search)}`),
+  });
+
+  const createStudentMutation = useMutation({
+    mutationFn: (data: StudentFormData) => apiPost("/secretary/students", {
+      ...data,
+      class_id: data.class_id ? parseInt(data.class_id) : null,
+      account_balance: parseFloat(data.account_balance),
+      amount_paid: data.amount_paid ? parseFloat(data.amount_paid) : 0,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["secretary-students"] });
+      setIsAddModalOpen(false);
+      form.reset();
+      toast.success("Étudiant créé avec succès");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erreur lors de la création de l'étudiant");
+    },
+  });
+
+  const updateStudentMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: Partial<StudentFormData> }) =>
+      apiPut(`/secretary/students/${id}`, {
+        ...data,
+        class_id: data.class_id ? parseInt(data.class_id) : null,
+        account_balance: parseFloat(data.account_balance!),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["secretary-students"] });
+      setEditingStudent(null);
+      form.reset();
+      toast.success("Étudiant mis à jour avec succès");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erreur lors de la mise à jour de l'étudiant");
+    },
+  });
+
+  const deleteStudentMutation = useMutation({
+    mutationFn: (id: number) => apiDelete(`/secretary/students/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["secretary-students"] });
+      toast.success("Étudiant supprimé avec succès");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erreur lors de la suppression de l'étudiant");
+    },
+  });
+
+  const students = data
+    ? data.data.map((student) => ({
+        id: student.id,
+        name: student.name,
+        className: student.class_name || "—",
+        phone: student.phone || "—",
+        status: "Actif", // Could be based on some logic
+      }))
+    : mockStudents;
+
+  const handleEditStudent = (student: Student) => {
+    setEditingStudent(student);
+    form.reset({
+      name: student.name,
+      email: student.email,
+      password: "", // Don't prefill password
+      phone: student.phone || "",
+      class_id: student.class_name ? "1" : "", // This would need proper class ID
+      account_balance: student.account_balance.toString(),
+      payment_status: student.payment_status as "paid" | "pending" | "late",
+      amount_paid: "",
+    });
+  };
+
+  const handleDeleteStudent = (student: Student) => {
+    if (confirm(`Êtes-vous sûr de vouloir supprimer ${student.name} ?`)) {
+      deleteStudentMutation.mutate(student.id);
+    }
+  };
+
+  const onSubmit = (formData: StudentFormData) => {
+    if (editingStudent) {
+      const updateData = { ...formData };
+      if (!updateData.password) {
+        delete updateData.password; // Don't send empty password for updates
+      }
+      updateStudentMutation.mutate({
+        id: editingStudent.id,
+        data: updateData,
+      });
+    } else {
+      createStudentMutation.mutate(formData);
+    }
+  };
+
+  const handleModalClose = () => {
+    setIsAddModalOpen(false);
+    setEditingStudent(null);
+    form.reset();
+  };
+
+  return (
+    <DashboardLayout role="secretary">
+      <div className="space-y-6">
+        <DashboardHeader
+          title="Étudiants"
+          subtitle="Liste et suivi des étudiants"
+          action={
+            <Dialog open={isAddModalOpen || !!editingStudent} onOpenChange={handleModalClose}>
+              <DialogTrigger asChild>
+                <button
+                  onClick={() => setIsAddModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
+                >
+                  <Plus className="w-4 h-4" /> Ajouter
+                </button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[500px]">
+                <DialogHeader>
+                  <DialogTitle>
+                    {editingStudent ? "Modifier l'étudiant" : "Ajouter un étudiant"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {editingStudent
+                      ? "Modifiez les informations de l'étudiant ci-dessous."
+                      : "Remplissez les informations pour créer un nouvel étudiant."}
+                  </DialogDescription>
+                </DialogHeader>
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Nom complet</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Entrez le nom complet" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email</FormLabel>
+                            <FormControl>
+                              <Input type="email" placeholder="Entrez l'email" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              Mot de passe {editingStudent && "(laisser vide pour ne pas changer)"}
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                type="password"
+                                placeholder="Entrez le mot de passe"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Téléphone</FormLabel>
+                            <FormControl>
+                              <Input placeholder="Entrez le numéro de téléphone" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="account_balance"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Solde du compte (DH)</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="payment_status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Statut de paiement</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionnez un statut" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="paid">Payé</SelectItem>
+                                <SelectItem value="pending">En attente</SelectItem>
+                                <SelectItem value="late">En retard</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={form.control}
+                      name="amount_paid"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Montant payé (optionnel)</FormLabel>
+                          <FormControl>
+                            <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="flex justify-end gap-3 pt-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleModalClose}
+                      >
+                        Annuler
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={createStudentMutation.isPending || updateStudentMutation.isPending}
+                      >
+                        {createStudentMutation.isPending || updateStudentMutation.isPending
+                          ? "Enregistrement..."
+                          : editingStudent
+                          ? "Modifier"
+                          : "Ajouter"}
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          }
+        />
+
+        <div className="bg-card rounded-2xl shadow-card overflow-hidden">
+          <div className="px-6 py-4 border-b border-border flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                placeholder="Rechercher un étudiant..."
+              />
+            </div>
+          </div>
+          <SimpleTable
+            columns={[
+              { key: "name", label: "Étudiant", className: "font-medium text-foreground" },
+              { key: "className", label: "Classe", className: "text-muted-foreground" },
+              { key: "phone", label: "Téléphone", className: "text-muted-foreground" },
+              {
+                key: "status",
+                label: "Statut",
+                render: (row) => (
+                  <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusStyles[row.status]}`}>
+                    {row.status}
+                  </span>
+                ),
+              },
+              {
+                key: "actions",
+                label: "Actions",
+                render: (row) => (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleEditStudent(row as Student)}
+                      className="p-1.5 rounded-lg hover:bg-secondary transition-colors"
+                    >
+                      <Edit className="w-4 h-4 text-muted-foreground" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteStudent(row as Student)}
+                      className="p-1.5 rounded-lg hover:bg-accent/10 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4 text-accent" />
+                    </button>
+                  </div>
+                ),
+              },
+            ]}
+            rows={students}
+          />
+        </div>
+      </div>
+    </DashboardLayout>
+  );
+}
