@@ -15,24 +15,24 @@
     --popover: 0 0% 100%;
     --popover-foreground: 220 12% 15%;
 
-    --primary: 221 54% 34%;
+    --primary: 221 80% 45%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 30% 94%;
+    --secondary: 210 60% 96%;
     --secondary-foreground: 220 12% 15%;
 
-    --muted: 210 35% 95%;
-    --muted-foreground: 220 15% 45%;
+    --muted: 210 45% 94%;
+    --muted-foreground: 220 18% 42%;
 
-    --accent: 348 80% 46%;
+    --accent: 348 90% 55%;
     --accent-foreground: 0 0% 100%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 210 20% 90%;
-    --input: 210 20% 90%;
-    --ring: 221 54% 34%;
+    --border: 210 30% 88%;
+    --input: 210 30% 88%;
+    --ring: 221 80% 45%;
 
     --radius: 0.75rem;
 
@@ -46,21 +46,21 @@
     --sidebar-ring: 221 54% 34%;
 
     /* Custom tokens */
-    --navy: 221 54% 34%;
-    --navy-light: 221 35% 55%;
-    --navy-dark: 221 50% 20%;
-    --crimson: 348 80% 46%;
-    --crimson-light: 348 75% 56%;
-    --gold: 44 88% 62%;
-    --gold-light: 44 90% 70%;
-    --sky: 210 100% 96%;
-    --sky-medium: 210 80% 90%;
+    --navy: 221 80% 45%;
+    --navy-light: 221 70% 62%;
+    --navy-dark: 221 65% 24%;
+    --crimson: 348 90% 55%;
+    --crimson-light: 348 88% 62%;
+    --gold: 44 96% 60%;
+    --gold-light: 44 95% 70%;
+    --sky: 205 100% 96%;
+    --sky-medium: 205 85% 90%;
     --success: 150 60% 45%;
     --warning: 38 92% 50%;
 
     /* ileng-style gradients */
-    --hero-gradient-start: 44 88% 62%;
-    --hero-gradient-end: 221 54% 34%;
+    --hero-gradient-start: 44 96% 60%;
+    --hero-gradient-end: 221 80% 45%;
   }
 
   .dark {
@@ -123,6 +123,37 @@
   }
   .bg-gradient-card {
     background: linear-gradient(180deg, hsl(var(--card)) 0%, hsl(var(--secondary)) 100%);
+  }
+  .bg-creative-sky {
+    background: radial-gradient(circle at 15% 15%, hsl(var(--sky)) 0%, transparent 55%),
+      radial-gradient(circle at 85% 0%, hsl(var(--gold-light) / 0.4) 0%, transparent 55%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--secondary)) 100%);
+  }
+  .bg-creative-waves {
+    background: radial-gradient(circle at 10% 90%, hsl(var(--navy-light) / 0.2) 0%, transparent 60%),
+      radial-gradient(circle at 90% 10%, hsl(var(--crimson-light) / 0.2) 0%, transparent 60%),
+      linear-gradient(135deg, hsl(var(--sky)) 0%, hsl(var(--background)) 60%);
+  }
+  .bg-creative-spotlight {
+    background: radial-gradient(circle at 20% 10%, hsl(var(--gold-light) / 0.35) 0%, transparent 55%),
+      radial-gradient(circle at 80% 30%, hsl(var(--navy-light) / 0.25) 0%, transparent 55%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--secondary)) 100%);
+  }
+
+  .dark .bg-creative-sky {
+    background: radial-gradient(circle at 15% 15%, hsl(var(--navy) / 0.25) 0%, transparent 55%),
+      radial-gradient(circle at 85% 0%, hsl(var(--crimson) / 0.25) 0%, transparent 55%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--secondary)) 100%);
+  }
+  .dark .bg-creative-waves {
+    background: radial-gradient(circle at 10% 90%, hsl(var(--navy-light) / 0.2) 0%, transparent 60%),
+      radial-gradient(circle at 90% 10%, hsl(var(--crimson-light) / 0.2) 0%, transparent 60%),
+      linear-gradient(135deg, hsl(var(--background)) 0%, hsl(var(--secondary)) 60%);
+  }
+  .dark .bg-creative-spotlight {
+    background: radial-gradient(circle at 20% 10%, hsl(var(--gold) / 0.25) 0%, transparent 55%),
+      radial-gradient(circle at 80% 30%, hsl(var(--navy-light) / 0.2) 0%, transparent 55%),
+      linear-gradient(180deg, hsl(var(--background)) 0%, hsl(var(--secondary)) 100%);
   }
   .shadow-card {
     box-shadow: 0 4px 24px -4px hsl(var(--navy) / 0.06), 0 1px 4px hsl(var(--navy) / 0.03);

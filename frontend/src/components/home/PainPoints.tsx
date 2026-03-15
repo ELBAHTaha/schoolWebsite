@@ -10,9 +10,9 @@ const painPoints = [
 
 export default function PainPoints() {
   return (
-    <section className="py-20 lg:py-28">
+    <section className="py-20 lg:py-28 bg-creative-sky">
       <div className="container mx-auto px-4 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center">
+        <div className="max-w-3xl mx-auto text-center bg-white/80 rounded-3xl shadow-card border border-white/70 p-8 md:p-10 dark:bg-card/80 dark:border-white/10">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}

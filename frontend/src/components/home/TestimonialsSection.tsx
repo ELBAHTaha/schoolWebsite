@@ -21,7 +21,7 @@ const testimonials = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-20 lg:py-28 bg-secondary/50">
+    <section className="py-20 lg:py-28 bg-creative-waves">
       <div className="container mx-auto px-4 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -44,7 +44,7 @@ export default function TestimonialsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.15 }}
-              className="bg-card rounded-2xl p-7 shadow-card relative"
+              className="bg-white/85 rounded-2xl p-7 shadow-card relative border border-white/70 dark:bg-card/85 dark:border-white/10"
             >
               <Quote className="w-8 h-8 text-primary/10 absolute top-6 right-6" />
               <div className="flex items-center gap-3 mb-4">
@@ -69,4 +69,3 @@ export default function TestimonialsSection() {
     </section>
   );
 }
-

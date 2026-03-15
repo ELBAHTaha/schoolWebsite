@@ -3,22 +3,20 @@ import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Star } from "lucide-react";
 
 const reasons = [
-  "Professeurs qualifiés et expérimentés du monde entier",
+  "Professeurs qualifiÃ©s et expÃ©rimentÃ©s du monde entier",
   "Support multilingue disponible 7j/7",
-  "Programmes personnalisés adaptés à vos besoins",
-  "Sessions interactives avec des enseignants spécialisés",
-  "Apprenez à votre rythme dans un environnement moderne",
+  "Programmes personnalisÃ©s adaptÃ©s Ã  vos besoins",
+  "Sessions interactives avec des enseignants spÃ©cialisÃ©s",
+  "Apprenez Ã  votre rythme dans un environnement moderne",
 ];
 
-const whyImg =
-  "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=1400&q=80";
+const compositeImg = "/images/landing/landing-composite.jpg";
 
 export default function WhyChooseUs() {
   return (
-    <section className="py-20 lg:py-28">
+    <section className="py-20 lg:py-28 bg-creative-spotlight">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="grid lg:grid-cols-2 gap-16 items-center">
-          {/* Image */}
           <motion.div
             initial={{ opacity: 0, x: -30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -26,19 +24,23 @@ export default function WhyChooseUs() {
             transition={{ duration: 0.6 }}
             className="relative"
           >
-            <div className="rounded-3xl overflow-hidden shadow-float">
-              <img src={whyImg} alt="Pourquoi JEFAL Privé" loading="lazy" className="w-full h-[400px] lg:h-[500px] object-cover" />
+            <div className="rounded-3xl overflow-hidden shadow-float border border-white/60 dark:border-white/10">
+              <div
+                className="w-full h-[400px] lg:h-[500px] bg-cover bg-no-repeat"
+                style={{ backgroundImage: `url(${compositeImg})`, backgroundPosition: "55% 35%" }}
+                aria-label="Pourquoi JEFAL PrivÃ©"
+              />
             </div>
-            {/* Floating stats */}
             <div className="absolute -bottom-6 -right-6 bg-card rounded-2xl p-5 shadow-float">
               <div className="flex items-center gap-2 mb-1">
-                {[1,2,3,4,5].map(s => <Star key={s} className="w-4 h-4 fill-accent text-accent" />)}
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <Star key={s} className="w-4 h-4 fill-accent text-accent" />
+                ))}
               </div>
-              <div className="text-sm font-heading font-bold text-foreground">+1200 étudiants satisfaits</div>
+              <div className="text-sm font-heading font-bold text-foreground">+1200 Ã©tudiants satisfaits</div>
             </div>
           </motion.div>
 
-          {/* Content */}
           <motion.div
             initial={{ opacity: 0, x: 30 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -46,11 +48,10 @@ export default function WhyChooseUs() {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
-              Pourquoi JEFAL Privé ?
+              Pourquoi JEFAL PrivÃ© ?
             </span>
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6">
-              Pourquoi choisir{" "}
-              <span className="text-primary">JEFAL Privé</span> pour apprendre les langues ?
+              Pourquoi choisir <span className="text-primary">JEFAL PrivÃ©</span> pour apprendre les langues ?
             </h2>
             <ul className="space-y-4 mb-8">
               {reasons.map((r) => (

@@ -21,7 +21,7 @@ const features = [
 
 export default function FeaturesBar() {
   return (
-    <section className="py-16 bg-card border-b border-border">
+    <section className="py-16 bg-creative-sky border-b border-border/60">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="grid md:grid-cols-3 gap-8">
           {features.map((f, i) => (
@@ -31,9 +31,9 @@ export default function FeaturesBar() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="flex items-start gap-4 p-6 rounded-2xl bg-secondary/50 hover:bg-secondary transition-colors"
+              className="flex items-start gap-4 p-6 rounded-2xl bg-white/80 hover:bg-white transition-colors shadow-card border border-white/70 dark:bg-card/80 dark:hover:bg-card dark:border-white/10"
             >
-              <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/20 to-accent/10 flex items-center justify-center flex-shrink-0">
                 <f.icon className="w-7 h-7 text-primary" />
               </div>
               <div>
