@@ -8,7 +8,7 @@ class StorePaymentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('admin', 'secretary') ?? false;
+        return $this->user()?->hasRole('admin', 'directeur', 'secretary') ?? false;
     }
 
     public function rules(): array

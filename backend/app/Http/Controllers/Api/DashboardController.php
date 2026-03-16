@@ -7,6 +7,7 @@ use App\Models\Assignment;
 use App\Models\Homework;
 use App\Models\Payment;
 use App\Models\Pdf;
+use App\Models\PreRegistrationLead;
 use App\Models\Schedule;
 use App\Models\SchoolClass;
 use App\Models\User;
@@ -167,6 +168,23 @@ class DashboardController extends Controller
                 'requests' => $requests,
             ],
             'tasks' => $tasks,
+        ]);
+    }
+
+    public function commercial(Request $request): \Illuminate\Http\JsonResponse
+    {
+        $user = $request->user();
+
+        $leads = PreRegistrationLead::where('assigned_commercial_id', $user?->id);
+
+        return response()->json([
+            'stats' => [
+                'total' => $leads->count(),
+                'new' => (clone $leads)->where('status', 'new')->count(),
+                'contacted' => (clone $leads)->where('status', 'contacted')->count(),
+                'confirmed' => (clone $leads)->where('status', 'confirmed')->count(),
+                'not_interested' => (clone $leads)->where('status', 'not_interested')->count(),
+            ],
         ]);
     }
 }

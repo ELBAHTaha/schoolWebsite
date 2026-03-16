@@ -18,10 +18,15 @@ interface LoginResponse {
 const roleDashboardPath = (role: string) => {
   switch (role) {
     case "admin":
+      return "/dashboard/admin";
+    case "directeur":
+      return "/dashboard/admin";
     case "student":
     case "professor":
     case "secretary":
       return `/dashboard/${role}`;
+    case "commercial":
+      return "/dashboard/commercial";
     default:
       return "/";
   }

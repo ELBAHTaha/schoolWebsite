@@ -3,10 +3,12 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AccountCreatedMail;
 use App\Models\ProfessorWorkingHour;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class UserManagementController extends Controller
@@ -24,7 +26,7 @@ class UserManagementController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'in:admin,secretary,professor,student,visitor'],
+            'role' => ['required', 'in:admin,directeur,secretary,professor,student,visitor,commercial'],
             'phone' => ['nullable', 'string', 'max:30'],
             'working_hours' => ['nullable', 'array'],
             'working_hours.*.day' => ['nullable', 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
@@ -34,6 +36,7 @@ class UserManagementController extends Controller
 
         $workingHours = $validated['working_hours'] ?? [];
         unset($validated['working_hours']);
+        $plainPassword = $validated['password'];
 
         $user = User::create($validated);
 
@@ -51,11 +54,18 @@ class UserManagementController extends Controller
             }
         }
 
+        $loginUrl = rtrim(config('app.frontend_url'), '/') . '/login';
+        Mail::to($user->email)->send(new AccountCreatedMail($user, $plainPassword, $loginUrl));
+
         return back()->with('status', 'User created.');
     }
 
     public function destroy(User $user): RedirectResponse
     {
+        if (auth()->user()?->role === 'directeur' && $user->role === 'admin') {
+            return back()->with('error', "Un directeur ne peut pas supprimer un administrateur.");
+        }
+
         $user->delete();
 
         return back()->with('status', 'User deleted.');

@@ -47,6 +47,7 @@ const buildNav = (role: string): NavItem[] => {
         { label: "Annonces", href: `${base}/announcements`, icon: Megaphone },
       ];
     case "admin":
+    case "directeur":
       return [
         { label: "Tableau de bord", href: base, icon: LayoutDashboard },
         { label: "Utilisateurs", href: `${base}/users`, icon: Users },
@@ -55,6 +56,11 @@ const buildNav = (role: string): NavItem[] => {
         { label: "Paiements", href: `${base}/payments`, icon: CreditCard },
         { label: "Annonces", href: `${base}/announcements`, icon: Megaphone },
         { label: "Paramètres", href: `${base}/settings`, icon: Settings },
+      ];
+    case "commercial":
+      return [
+        { label: "Tableau de bord", href: base, icon: LayoutDashboard },
+        { label: "Leads", href: `${base}/leads`, icon: Users },
       ];
     default:
       return [
@@ -71,9 +77,11 @@ const buildNav = (role: string): NavItem[] => {
 
 const roleLabels: Record<string, string> = {
   admin: "Administrateur",
+  directeur: "Directeur",
   secretary: "Secrétaire",
   professor: "Professeur",
   student: "Étudiant",
+  commercial: "Commercial",
 };
 
 interface Props {

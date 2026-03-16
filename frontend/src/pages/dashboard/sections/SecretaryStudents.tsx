@@ -216,7 +216,16 @@ export default function SecretaryStudents() {
           title="Étudiants"
           subtitle="Liste et suivi des étudiants"
           action={
-            <Dialog open={isAddModalOpen || !!editingStudent} onOpenChange={handleModalClose}>
+            <Dialog
+              open={isAddModalOpen || !!editingStudent}
+              onOpenChange={(open) => {
+                if (!open) {
+                  handleModalClose();
+                } else {
+                  setIsAddModalOpen(true);
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <button
                   onClick={() => setIsAddModalOpen(true)}

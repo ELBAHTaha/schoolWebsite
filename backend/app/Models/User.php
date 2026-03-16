@@ -98,6 +98,11 @@ class User extends Authenticatable
         return $this->hasMany(ProfessorWorkingHour::class, 'professor_id');
     }
 
+    public function assignedLeads(): HasMany
+    {
+        return $this->hasMany(PreRegistrationLead::class, 'assigned_commercial_id');
+    }
+
     public function hasRole(string ...$roles): bool
     {
         return in_array($this->role, $roles, true);

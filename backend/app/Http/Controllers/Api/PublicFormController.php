@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\LeadAssignmentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -30,9 +31,9 @@ class PublicFormController extends Controller
         ]);
     }
 
-    public function preRegistration(Request $request): JsonResponse
+    public function preRegistration(Request $request, LeadAssignmentService $leadAssignmentService): JsonResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'desired_program' => ['required', 'string', 'max:255'],
@@ -40,8 +41,11 @@ class PublicFormController extends Controller
             'message' => ['nullable', 'string'],
         ]);
 
+        $lead = $leadAssignmentService->createLead($validated);
+
         return response()->json([
             'message' => 'Pre-registration submitted.',
+            'lead_id' => $lead->id,
         ]);
     }
 

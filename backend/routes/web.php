@@ -46,7 +46,7 @@ Route::post('/logout', [AuthController::class, 'logout'])
     ->middleware('auth')
     ->name('logout');
 
-Route::middleware(['auth', 'role:admin'])
+Route::middleware(['auth', 'role:admin,directeur'])
     ->prefix('dashboard/admin')
     ->as('admin.')
     ->group(function () {

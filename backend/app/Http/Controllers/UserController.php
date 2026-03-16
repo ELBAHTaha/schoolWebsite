@@ -12,9 +12,14 @@ class UserController extends Controller
 {
     public function store(StoreUserRequest $request): RedirectResponse
     {
-        $user = User::create($request->validated());
+        $validated = $request->validated();
+        $plainPassword = $validated['password'];
+        unset($validated['working_hours']);
 
-        Mail::to($user->email)->queue(new AccountCreatedMail($user));
+        $user = User::create($validated);
+
+        $loginUrl = rtrim(config('app.frontend_url'), '/') . '/login';
+        Mail::to($user->email)->send(new AccountCreatedMail($user, $plainPassword, $loginUrl));
 
         return back()->with('status', 'Compte utilisateur cree avec succes.');
     }

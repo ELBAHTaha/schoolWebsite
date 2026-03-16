@@ -1,12 +1,14 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Secretary;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AccountCreatedMail;
 use App\Models\ProfessorWorkingHour;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class ProfessorManagementController extends Controller
@@ -36,6 +38,7 @@ class ProfessorManagementController extends Controller
 
         $workingHours = $validated['working_hours'] ?? [];
         unset($validated['working_hours']);
+        $plainPassword = $validated['password'];
 
         $professor = User::create([
             ...$validated,
@@ -54,7 +57,10 @@ class ProfessorManagementController extends Controller
             ]);
         }
 
-        return back()->with('status', 'Professeur créé avec succès.');
+        $loginUrl = rtrim(config('app.frontend_url'), '/') . '/login';
+        Mail::to($professor->email)->send(new AccountCreatedMail($professor, $plainPassword, $loginUrl));
+
+        return back()->with('status', 'Professeur crÃ©Ã© avec succÃ¨s.');
     }
 
     public function destroy(User $professor): RedirectResponse
@@ -62,7 +68,7 @@ class ProfessorManagementController extends Controller
         abort_unless($professor->role === 'professor', 404);
         $professor->delete();
 
-        return back()->with('status', 'Professeur supprimé.');
+        return back()->with('status', 'Professeur supprimÃ©.');
     }
 
     public function update(Request $request, User $professor): RedirectResponse
@@ -89,6 +95,7 @@ class ProfessorManagementController extends Controller
             ]);
         }
 
-        return back()->with('status', 'Horaires professeur mis à jour.');
+        return back()->with('status', 'Horaires professeur mis Ã  jour.');
     }
 }
+

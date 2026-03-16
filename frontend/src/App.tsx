@@ -39,6 +39,7 @@ import SecretaryClasses from "./pages/dashboard/sections/SecretaryClasses";
 import SecretaryPayments from "./pages/dashboard/sections/SecretaryPayments";
 import SecretaryReceipts from "./pages/dashboard/sections/SecretaryReceipts";
 import SecretarySettings from "./pages/dashboard/sections/SecretarySettings";
+import CommercialDashboard from "./pages/dashboard/CommercialDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -46,34 +47,33 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
-      <ThemeProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-          <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/programs" element={<Programs />} />
-          <Route path="/contact" element={<Contact />} />
-          <Route path="/pre-registration" element={<PreRegistration />} />
-          <Route path="/login" element={<Login />} />
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+        <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/programs" element={<Programs />} />
+        <Route path="/contact" element={<Contact />} />
+        <Route path="/pre-registration" element={<PreRegistration />} />
+        <Route path="/login" element={<Login />} />
           <Route path="/dashboard" element={<Navigate to="/dashboard/admin" replace />} />
-          <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-          <Route path="/dashboard/admin/users" element={<ProtectedRoute allowedRoles={['admin']}><UsersManagement /></ProtectedRoute>} />
+          <Route path="/dashboard/admin" element={<ProtectedRoute allowedRoles={['admin','directeur']}><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/admin/users" element={<ProtectedRoute allowedRoles={['admin','directeur']}><UsersManagement /></ProtectedRoute>} />
           <Route
             path="/dashboard/admin/classes"
-            element={<ProtectedRoute allowedRoles={['admin']}><AdminClasses /></ProtectedRoute>}
+            element={<ProtectedRoute allowedRoles={['admin','directeur']}><AdminClasses /></ProtectedRoute>}
           />
           <Route
             path="/dashboard/admin/rooms"
-            element={<ProtectedRoute allowedRoles={['admin']}><AdminRooms /></ProtectedRoute>}
+            element={<ProtectedRoute allowedRoles={['admin','directeur']}><AdminRooms /></ProtectedRoute>}
           />
-          <Route path="/dashboard/admin/payments" element={<ProtectedRoute allowedRoles={['admin']}><PaymentsOverview /></ProtectedRoute>} />
-          <Route path="/dashboard/admin/announcements" element={<ProtectedRoute allowedRoles={['admin']}><Announcements role="admin" /></ProtectedRoute>} />
+          <Route path="/dashboard/admin/payments" element={<ProtectedRoute allowedRoles={['admin','directeur']}><PaymentsOverview /></ProtectedRoute>} />
+          <Route path="/dashboard/admin/announcements" element={<ProtectedRoute allowedRoles={['admin','directeur']}><Announcements role="admin" /></ProtectedRoute>} />
           <Route
             path="/dashboard/admin/settings"
-            element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>}
+            element={<ProtectedRoute allowedRoles={['admin','directeur']}><AdminSettings /></ProtectedRoute>}
           />
           <Route path="/dashboard/student" element={<ProtectedRoute allowedRoles={['student']}><StudentDashboard /></ProtectedRoute>} />
           <Route
@@ -149,11 +149,12 @@ const App = () => (
             element={<ProtectedRoute allowedRoles={['secretary']}><SecretaryReceipts /></ProtectedRoute>}
           />
           <Route path="/dashboard/secretary/announcements" element={<ProtectedRoute allowedRoles={['secretary']}><Announcements role="secretary" /></ProtectedRoute>} />
+          <Route path="/dashboard/commercial" element={<ProtectedRoute allowedRoles={['commercial']}><CommercialDashboard /></ProtectedRoute>} />
+          <Route path="/dashboard/commercial/leads" element={<ProtectedRoute allowedRoles={['commercial']}><CommercialDashboard /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
     </TooltipProvider>
-    </ThemeProvider>
     </AuthProvider>
   </QueryClientProvider>
 );

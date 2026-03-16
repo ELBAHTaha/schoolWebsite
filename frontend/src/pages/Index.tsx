@@ -17,7 +17,6 @@ export default function Index() {
       <PainPoints />
       <ProgramsShowcase />
       <PackageConfigurator />
-      <WhyChooseUs />
       <TestimonialsSection />
       <FAQSection />
       <CTASection />

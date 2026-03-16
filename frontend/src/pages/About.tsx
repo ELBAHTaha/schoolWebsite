@@ -127,35 +127,6 @@ export default function About() {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="py-20">
-        <div className="container mx-auto px-4 lg:px-8">
-          <motion.div {...fadeUp} className="text-center mb-14">
-            <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">Notre Équipe</span>
-            <h2 className="text-3xl font-heading font-bold text-foreground">Des professionnels passionnés</h2>
-          </motion.div>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {team.map((t, i) => (
-              <motion.div
-                key={t.name}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="bg-card rounded-2xl p-6 shadow-card text-center group hover:shadow-card-hover transition-shadow"
-              >
-                <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4 group-hover:bg-primary transition-colors">
-                  <span className="text-xl font-heading font-bold text-primary group-hover:text-primary-foreground transition-colors">
-                    {t.initials}
-                  </span>
-                </div>
-                <h3 className="font-heading font-semibold text-foreground">{t.name}</h3>
-                <p className="text-sm text-muted-foreground mt-1">{t.role}</p>
-              </motion.div>
-            ))}
-          </div>
-        </div>
-      </section>
     </PublicLayout>
   );
 }

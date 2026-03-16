@@ -5,9 +5,9 @@ import { Link } from "react-router-dom";
 import PreRegistrationForm from "@/components/PreRegistrationForm";
 
 const durations = [
-  { months: 3, label: "(X3) Month", sub: "x3 Mois", bonus: "", price: 900 },
-  { months: 6, label: "(X6) Month", sub: "+ 1 Mois Gratuit", bonus: "Le plus demandé", price: 1500 },
-  { months: 12, label: "(X12) Month", sub: "+ 2 Mois Gratuits", bonus: "", price: 2400 },
+  { months: 3, label: "(X3) Mois", sub: "x3 Mois", bonus: "", price: 900 },
+  { months: 6, label: "(X6) Mois", sub: "+ 1 Mois Gratuit", bonus: "Le plus demandé", price: 1500 },
+  { months: 12, label: "(X12) Mois", sub: "+ 2 Mois Gratuits", bonus: "", price: 2400 },
 ];
 
 const sessions = [

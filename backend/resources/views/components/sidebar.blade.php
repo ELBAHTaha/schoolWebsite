@@ -9,6 +9,14 @@
             ['label' => 'Paiements', 'route' => 'admin.payments.index'],
             ['label' => 'Annonces', 'route' => 'admin.announcements.index'],
         ],
+        'directeur' => [
+            ['label' => 'Tableau de bord', 'route' => 'admin.dashboard'],
+            ['label' => 'Utilisateurs', 'route' => 'admin.users.index'],
+            ['label' => 'Classes', 'route' => 'admin.classes.index'],
+            ['label' => 'Salles', 'route' => 'admin.rooms.index'],
+            ['label' => 'Paiements', 'route' => 'admin.payments.index'],
+            ['label' => 'Annonces', 'route' => 'admin.announcements.index'],
+        ],
         'secretary' => [
             ['label' => 'Tableau de bord', 'route' => 'secretary.dashboard'],
             ['label' => 'Etudiants', 'route' => 'secretary.students.index'],
@@ -30,6 +38,9 @@
             ['label' => 'Assignments', 'route' => 'student.assignments.index'],
             ['label' => 'Contenu de cours', 'route' => 'student.course-content.index'],
             ['label' => 'Profil', 'route' => 'student.profile.edit'],
+        ],
+        'commercial' => [
+            ['label' => 'Tableau de bord', 'route' => 'home'],
         ],
     ][$role] ?? [];
 @endphp

@@ -3,7 +3,7 @@ import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
 
 interface PlaceholderPageProps {
-  role: "admin" | "student" | "professor" | "secretary";
+  role: "admin" | "directeur" | "student" | "professor" | "secretary" | "commercial";
   title: string;
   subtitle?: string;
 }

@@ -3,12 +3,14 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AccountCreatedMail;
 use App\Models\Payment;
 use App\Models\SchoolClass;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class SecretaryStudentsController extends Controller
 {
@@ -32,6 +34,9 @@ class SecretaryStudentsController extends Controller
         }
 
         $students = $query->latest()->paginate(20);
+
+        $loginUrl = rtrim(config('app.frontend_url'), '/') . '/login';
+        Mail::to($student->email)->send(new AccountCreatedMail($student, $plainPassword, $loginUrl));
 
         return response()->json([
             'data' => $students->map(fn (User $student) => [
@@ -65,12 +70,13 @@ class SecretaryStudentsController extends Controller
         ]);
 
         $amountPaid = (float) ($validated['amount_paid'] ?? 0);
+        $plainPassword = $validated['password'];
         unset($validated['amount_paid']);
 
         $student = User::create([
             ...$validated,
             'role' => 'student',
-            'password' => Hash::make($validated['password']),
+            'password' => Hash::make($plainPassword),
         ]);
 
         // Create payment record if amount was paid

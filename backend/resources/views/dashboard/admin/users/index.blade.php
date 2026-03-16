@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+﻿@extends('layouts.dashboard')
 @section('title', 'Admin - Users')
 @section('dashboard-content')
 <style>
@@ -79,9 +79,9 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2.2rem;flex-wrap:wrap;gap:1rem;">
         <div>
             <h1 style="font-size:2.2rem;font-weight:800;margin:0;color:#1e293b;letter-spacing:-1px;">Gestion des Utilisateurs</h1>
-            <div style="color:#64748b;font-size:1.1rem;margin-top:.2rem;">Gérez et suivez tous les utilisateurs de l'établissement</div>
+            <div style="color:#64748b;font-size:1.1rem;margin-top:.2rem;">GÃ©rez et suivez tous les utilisateurs de l'Ã©tablissement</div>
         </div>
-        <button id="showCreateFormBtn" class="create-btn" style="margin-left:auto;">+ Créer un utilisateur</button>
+        <button id="showCreateFormBtn" class="create-btn" style="margin-left:auto;">+ CrÃ©er un utilisateur</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(1,1fr);gap:1.2rem;margin-bottom:2.2rem;">
         <div style="padding:1.3rem 1.2rem;display:flex;align-items:center;gap:.8rem">
@@ -97,12 +97,14 @@
     <div style="display:flex;gap:1rem;margin-bottom:2.2rem;flex-wrap:wrap;">
         <input type="text" id="searchInput" placeholder="Rechercher un utilisateur..." style="flex:1 1 300px;min-width:220px;padding:.9rem 1.2rem;border-radius:.7rem;border:1px solid #e5e7eb;font-size:1.08rem;background:#fff;">
         <select id="roleFilter" style="padding:.9rem 1.2rem;border-radius:.7rem;border:1px solid #e5e7eb;font-size:1.08rem;background:#fff;">
-            <option value="">Tous les r�les</option>
+            <option value="">Tous les rôles</option>
             <option value="admin">admin</option>
+            <option value="directeur">directeur</option>
             <option value="secretary">secretary</option>
             <option value="professor">professor</option>
             <option value="student">student</option>
             <option value="visitor">visitor</option>
+            <option value="commercial">commercial</option>
         </select>
     </div>
     <div style="display:flex;justify-content:center;margin-top:1.5rem;">
@@ -112,7 +114,7 @@
                     <th style="padding:1rem 1.2rem;border-top-left-radius:1rem;text-align:left;font-weight:700;">ID</th>
                     <th style="padding:1rem 1.2rem;text-align:left;font-weight:700;">Nom</th>
                     <th style="padding:1rem 1.2rem;text-align:left;font-weight:700;">Email</th>
-                    <th style="padding:1rem 1.2rem;text-align:left;font-weight:700;">Rôle</th>
+                    <th style="padding:1rem 1.2rem;text-align:left;font-weight:700;">RÃ´le</th>
                     <th style="padding:1rem 1.2rem;border-top-right-radius:1rem;text-align:left;font-weight:700;">Actions</th>
                 </tr>
             </thead>
@@ -161,20 +163,22 @@
 <div id="userModal" class="modal-bg">
     <form method="POST" action="{{ route('admin.users.store') }}" class="modal-card">
         @csrf
-        <button type="button" id="closeUserModal" class="modal-close">�</button>
-        <div class="modal-title">Cr�er un utilisateur</div>
+        <button type="button" id="closeUserModal" class="modal-close">×</button>
+        <div class="modal-title">Créer un utilisateur</div>
         <input name="name" placeholder="Nom" required class="modal-input">
         <input name="email" type="email" placeholder="Email" required class="modal-input">
         <input name="password" type="password" placeholder="Mot de passe" required class="modal-input">
         <select name="role" id="roleSelect" required class="modal-input">
-            <option value="">R�le</option>
+            <option value="">Rôle</option>
             <option value="admin">admin</option>
+            <option value="directeur">directeur</option>
             <option value="secretary">secretary</option>
             <option value="professor">professor</option>
             <option value="student">student</option>
             <option value="visitor">visitor</option>
+            <option value="commercial">commercial</option>
         </select>
-        <input name="phone" placeholder="T�l�phone (optionnel)" class="modal-input">
+        <input name="phone" placeholder="Téléphone (optionnel)" class="modal-input">
         <div id="workingHoursSection" style="display:none;border:1px dashed #cbd5f5;border-radius:10px;padding:12px;">
             <div style="font-weight:600;color:#2563eb;margin-bottom:.6rem;">Horaires de travail (professeur)</div>
             <div id="workingHoursContainer" style="display:flex;flex-direction:column;gap:.6rem;">
@@ -193,9 +197,9 @@
                     <input name="working_hours[0][ends_at]" type="time" class="modal-input" style="margin:0;">
                 </div>
             </div>
-            <button type="button" id="addWorkingHour" class="btn" style="margin-top:.6rem;background:#e2e8f0;color:#1e293b;">+ Ajouter un cr�neau</button>
+            <button type="button" id="addWorkingHour" class="btn" style="margin-top:.6rem;background:#e2e8f0;color:#1e293b;">+ Ajouter un créneau</button>
         </div>
-        <button class="create-btn" style="width:100%">Cr�er</button>
+        <button class="create-btn" style="width:100%">Créer</button>
     </form>
 </div>
 
@@ -204,10 +208,10 @@
     <form method="POST" id="adminEditHoursForm" class="modal-card">
         @csrf
         @method('PUT')
-        <button type="button" id="adminCloseEditHours" class="modal-close">�</button>
+        <button type="button" id="adminCloseEditHours" class="modal-close">×</button>
         <div class="modal-title">Modifier horaires professeur</div>
         <div id="adminEditHoursContainer" style="display:flex;flex-direction:column;gap:.6rem;"></div>
-        <button type="button" id="adminAddEditHour" class="btn" style="margin-top:.6rem;background:#e2e8f0;color:#1e293b;">+ Ajouter un cr�neau</button>
+        <button type="button" id="adminAddEditHour" class="btn" style="margin-top:.6rem;background:#e2e8f0;color:#1e293b;">+ Ajouter un créneau</button>
         <button class="create-btn" style="width:100%;margin-top:.8rem;">Enregistrer</button>
     </form>
 </div>
@@ -330,6 +334,7 @@ adminEditModal.onclick = (e) => { if (e.target === adminEditModal) { adminEditMo
 </script>
 
 @endsection
+
 
 
 

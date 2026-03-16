@@ -1,7 +1,7 @@
 ﻿import { useMemo, useState } from "react";
 import { Search, Plus, Filter, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -33,15 +33,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
 
 const userFormSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   email: z.string().email("Email invalide"),
   password: z.string().optional(),
-  role: z.enum(["admin", "professor", "secretary", "student", "visitor"], {
+  role: z.enum(["admin", "directeur", "professor", "secretary", "student", "visitor", "commercial"], {
     required_error: "Le rôle est requis",
   }),
   phone: z.string().optional(),
+  working_hours: z
+    .array(
+      z.object({
+        day: z.string().optional(),
+        starts_at: z.string().optional(),
+        ends_at: z.string().optional(),
+      })
+    )
+    .optional(),
 });
 
 type UserFormData = z.infer<typeof userFormSchema>;
@@ -50,23 +60,28 @@ const mockUsers = Array.from({ length: 20 }, (_, i) => ({
   id: i + 1,
   name: ["Fatima Zahra", "Youssef Alami", "Sara Benali", "Ahmed Mansouri", "Khadija El Idrissi", "Omar Tahiri", "Leila Bouazza", "Rachid Moussaoui"][i % 8],
   email: `user${i + 1}@email.com`,
-  role: ["Étudiant", "Professeur", "Secrétaire", "Admin"][i % 4],
+  role: ["student", "professor", "secretary", "admin"][i % 4],
   status: i % 5 === 0 ? "Inactif" : "Actif",
 }));
 
 const roleStyles: Record<string, string> = {
-  Admin: "bg-accent/10 text-accent",
-  Professeur: "bg-primary/10 text-primary",
-  Secrétaire: "bg-gold/10 text-gold",
-  Étudiant: "bg-success/10 text-success",
+  admin: "bg-accent/10 text-accent",
+  directeur: "bg-primary/10 text-primary",
+  professor: "bg-primary/10 text-primary",
+  secretary: "bg-gold/10 text-gold",
+  student: "bg-success/10 text-success",
+  visitor: "bg-muted text-muted-foreground",
+  commercial: "bg-warning/10 text-warning",
 };
 
 const roleLabels: Record<string, string> = {
   admin: "Admin",
+  directeur: "Directeur",
   professor: "Professeur",
   secretary: "Secrétaire",
   student: "Étudiant",
   visitor: "Visiteur",
+  commercial: "Commercial",
 };
 
 interface UsersResponse {
@@ -74,6 +89,7 @@ interface UsersResponse {
     id: number;
     name: string;
     email: string;
+    phone?: string | null;
     role: string;
     status: string;
   }>;
@@ -85,6 +101,7 @@ export default function UsersManagement() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const queryClient = useQueryClient();
+  const { user: currentUser } = useAuth();
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
@@ -94,8 +111,15 @@ export default function UsersManagement() {
       password: "",
       role: "student",
       phone: "",
+      working_hours: [{ day: "", starts_at: "", ends_at: "" }],
     },
   });
+  const { fields: workingHourFields, append: appendWorkingHour, remove: removeWorkingHour } =
+    useFieldArray({
+      control: form.control,
+      name: "working_hours",
+    });
+  const selectedRole = form.watch("role");
 
   const { data } = useQuery({
     queryKey: ["admin-users", search],
@@ -148,10 +172,15 @@ export default function UsersManagement() {
       password: "", // Don't prefill password
       role: user.role,
       phone: user.phone || "",
+      working_hours: [{ day: "", starts_at: "", ends_at: "" }],
     });
   };
 
   const handleDeleteUser = (user: any) => {
+    if (currentUser?.role === "directeur" && user.role === "admin") {
+      toast.error("Un directeur ne peut pas supprimer un administrateur.");
+      return;
+    }
     if (confirm(`Êtes-vous sûr de vouloir supprimer ${user.name} ?`)) {
       deleteUserMutation.mutate(user.id);
     }
@@ -165,8 +194,20 @@ export default function UsersManagement() {
       return;
     }
 
+    const preparedData: UserFormData = { ...data };
+    const normalizedWorkingHours =
+      preparedData.working_hours?.filter(
+        (slot) => slot.day && slot.starts_at && slot.ends_at
+      ) ?? [];
+
+    if (preparedData.role === "professor" && normalizedWorkingHours.length > 0) {
+      preparedData.working_hours = normalizedWorkingHours;
+    } else {
+      delete preparedData.working_hours;
+    }
+
     if (editingUser) {
-      const updateData = { ...data };
+      const updateData = { ...preparedData };
       if (!updateData.password) {
         delete updateData.password; // Don't send empty password for updates
       }
@@ -175,7 +216,7 @@ export default function UsersManagement() {
         data: updateData,
       });
     } else {
-      createUserMutation.mutate(data as Required<UserFormData>);
+      createUserMutation.mutate(preparedData as Required<UserFormData>);
     }
   };
 
@@ -187,9 +228,14 @@ export default function UsersManagement() {
 
   const fallbackUsers = useMemo(
     () =>
-      mockUsers.filter((u) =>
-        u.name.toLowerCase().includes(search.toLowerCase()) || u.email.includes(search.toLowerCase())
-      ),
+      mockUsers
+        .filter((u) =>
+          u.name.toLowerCase().includes(search.toLowerCase()) || u.email.includes(search.toLowerCase())
+        )
+        .map((u) => ({
+          ...u,
+          roleLabel: roleLabels[u.role] ?? "Utilisateur",
+        })),
     [search]
   );
 
@@ -198,7 +244,9 @@ export default function UsersManagement() {
         id: user.id,
         name: user.name,
         email: user.email,
-        role: roleLabels[user.role] ?? "Utilisateur",
+        phone: user.phone ?? "",
+        role: user.role,
+        roleLabel: roleLabels[user.role] ?? "Utilisateur",
         status: user.status === "inactive" ? "Inactif" : "Actif",
       }))
     : fallbackUsers;
@@ -210,7 +258,16 @@ export default function UsersManagement() {
           title="Gestion des utilisateurs"
           subtitle={`${data?.total ?? mockUsers.length} utilisateurs au total`}
           action={
-            <Dialog open={isAddModalOpen || !!editingUser} onOpenChange={handleModalClose}>
+            <Dialog
+              open={isAddModalOpen || !!editingUser}
+              onOpenChange={(open) => {
+                if (!open) {
+                  handleModalClose();
+                } else {
+                  setIsAddModalOpen(true);
+                }
+              }}
+            >
               <DialogTrigger asChild>
                 <button
                   onClick={() => setIsAddModalOpen(true)}
@@ -293,6 +350,8 @@ export default function UsersManagement() {
                               <SelectItem value="student">Étudiant</SelectItem>
                               <SelectItem value="professor">Professeur</SelectItem>
                               <SelectItem value="secretary">Secrétaire</SelectItem>
+                              <SelectItem value="commercial">Commercial</SelectItem>
+                              <SelectItem value="directeur">Directeur</SelectItem>
                               <SelectItem value="admin">Admin</SelectItem>
                               <SelectItem value="visitor">Visiteur</SelectItem>
                             </SelectContent>
@@ -314,6 +373,56 @@ export default function UsersManagement() {
                         </FormItem>
                       )}
                     />
+                    {selectedRole === "professor" && (
+                      <div className="space-y-3 rounded-lg border border-border p-3">
+                        <div className="flex items-center justify-between">
+                          <FormLabel className="text-sm">Horaires de travail</FormLabel>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() =>
+                              appendWorkingHour({ day: "", starts_at: "", ends_at: "" })
+                            }
+                          >
+                            Ajouter
+                          </Button>
+                        </div>
+                        {workingHourFields.map((field, index) => (
+                          <div key={field.id} className="grid grid-cols-3 gap-2">
+                            <select
+                              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                              {...form.register(`working_hours.${index}.day` as const)}
+                            >
+                              <option value="">Jour</option>
+                              <option value="Monday">Monday</option>
+                              <option value="Tuesday">Tuesday</option>
+                              <option value="Wednesday">Wednesday</option>
+                              <option value="Thursday">Thursday</option>
+                              <option value="Friday">Friday</option>
+                              <option value="Saturday">Saturday</option>
+                              <option value="Sunday">Sunday</option>
+                            </select>
+                            <Input
+                              type="time"
+                              {...form.register(`working_hours.${index}.starts_at` as const)}
+                            />
+                            <div className="flex gap-2">
+                              <Input
+                                type="time"
+                                {...form.register(`working_hours.${index}.ends_at` as const)}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => removeWorkingHour(index)}
+                              >
+                                Retirer
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex justify-end gap-3 pt-4">
                       <Button
                         type="button"
@@ -378,7 +487,7 @@ export default function UsersManagement() {
                     <td className="px-6 py-3 text-muted-foreground">{u.email}</td>
                     <td className="px-6 py-3">
                       <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${roleStyles[u.role] ?? "bg-muted text-muted-foreground"}`}>
-                        {u.role}
+                        {u.roleLabel ?? roleLabels[u.role] ?? "Utilisateur"}
                       </span>
                     </td>
                     <td className="px-6 py-3">
@@ -396,7 +505,8 @@ export default function UsersManagement() {
                         </button>
                         <button
                           onClick={() => handleDeleteUser(u)}
-                          className="p-1.5 rounded-lg hover:bg-accent/10 transition-colors"
+                          className="p-1.5 rounded-lg hover:bg-accent/10 transition-colors disabled:opacity-50"
+                          disabled={currentUser?.role === "directeur" && u.role === "admin"}
                         >
                           <Trash2 className="w-4 h-4 text-accent" />
                         </button>

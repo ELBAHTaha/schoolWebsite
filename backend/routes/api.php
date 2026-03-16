@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AdminClassesController;
 use App\Http\Controllers\Api\AdminPaymentsController;
 use App\Http\Controllers\Api\AdminUsersController;
+use App\Http\Controllers\Api\CommercialLeadsController;
 use App\Http\Controllers\Api\ProfessorAssignmentsController;
 use App\Http\Controllers\Api\SecretaryPaymentsController;
 use App\Http\Controllers\Api\SecretaryStudentsController;
@@ -27,7 +28,7 @@ Route::get('/classes', [PublicClassController::class, 'index'])
 Route::get('/public-announcements', [PublicAnnouncementController::class, 'index'])
     ->name('api.public-announcements.index');
 
-Route::post('/contact', [PublicFormController::class, 'contact'])
+Route::post('/contact', [\App\Http\Controllers\ContactController::class, 'send'])
     ->name('api.contact.store');
 
 Route::post('/pre-registration', [PublicFormController::class, 'preRegistration'])
@@ -36,7 +37,7 @@ Route::post('/pre-registration', [PublicFormController::class, 'preRegistration'
 Route::post('/register', [PublicFormController::class, 'register'])
     ->name('api.register.store');
 
-Route::middleware(['web', 'auth', 'role:admin'])
+Route::middleware(['web', 'auth', 'role:admin,directeur'])
     ->group(function () {
         Route::get('/dashboard/admin', [DashboardController::class, 'admin'])
             ->name('api.dashboard.admin');
@@ -104,4 +105,14 @@ Route::middleware(['web', 'auth', 'role:secretary'])
             ->name('api.secretary.payments.update');
         Route::delete('/payments/{payment}', [SecretaryPaymentsController::class, 'destroy'])
             ->name('api.secretary.payments.destroy');
+    });
+
+Route::middleware(['web', 'auth', 'role:commercial'])
+    ->group(function () {
+        Route::get('/dashboard/commercial', [DashboardController::class, 'commercial'])
+            ->name('api.dashboard.commercial');
+        Route::get('/commercial/leads', [CommercialLeadsController::class, 'index'])
+            ->name('api.commercial.leads.index');
+        Route::patch('/commercial/leads/{lead}', [CommercialLeadsController::class, 'update'])
+            ->name('api.commercial.leads.update');
     });

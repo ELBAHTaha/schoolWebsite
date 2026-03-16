@@ -20,8 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->validateCsrfTokens(except: [
-            'api/login',
-            'api/logout',
+            'api/*',
         ]);
 
         // CORS middleware for API routes

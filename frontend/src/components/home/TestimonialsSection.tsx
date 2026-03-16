@@ -21,7 +21,15 @@ const testimonials = [
 
 export default function TestimonialsSection() {
   return (
-    <section className="py-20 lg:py-28 bg-creative-waves">
+    <section
+      className="py-20 lg:py-28 bg-creative-waves"
+      style={{
+        backgroundImage: 'url(/src/assets/temoignage.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
       <div className="container mx-auto px-4 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 30 }}

@@ -86,6 +86,7 @@ class AuthController extends Controller
     {
         switch ($role) {
             case 'admin':
+            case 'directeur':
                 return redirect()->route('admin.dashboard');
             case 'secretary':
                 return redirect()->route('secretary.dashboard');
@@ -93,6 +94,8 @@ class AuthController extends Controller
                 return redirect()->route('professor.dashboard');
             case 'student':
                 return redirect()->route('student.dashboard');
+            case 'commercial':
+                return redirect('/dashboard/commercial');
             case 'visitor':
                 return redirect('/');
             default:

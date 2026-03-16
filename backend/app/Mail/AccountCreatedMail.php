@@ -14,7 +14,11 @@ class AccountCreatedMail extends Mailable
     use Queueable;
     use SerializesModels;
 
-    public function __construct(public User $user)
+    public function __construct(
+        public User $user,
+        public string $plainPassword,
+        public string $loginUrl
+    )
     {
     }
 

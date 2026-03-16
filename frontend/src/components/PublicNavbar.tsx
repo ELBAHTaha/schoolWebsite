@@ -1,7 +1,6 @@
 ﻿import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
-import { ThemeToggle } from "./ThemeToggle";
 
 const navLinks = [
   { label: "Accueil", href: "/" },
@@ -51,7 +50,6 @@ export default function PublicNavbar() {
 
           {/* CTA */}
           <div className="hidden lg:flex items-center gap-3">
-            <ThemeToggle />
             <Link
               to="/login"
               className="px-5 py-2.5 text-sm font-medium rounded-full text-foreground hover:text-primary transition-colors"

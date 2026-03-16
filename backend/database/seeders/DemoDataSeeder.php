@@ -23,6 +23,13 @@ class DemoDataSeeder extends Seeder
             'phone' => '+212600000001',
         ]);
 
+        User::updateOrCreate(['email' => 'directeur@jefalprive.ma'], [
+            'name' => 'Directeur JEFAL',
+            'password' => Hash::make('Password123!'),
+            'role' => 'directeur',
+            'phone' => '+212600000006',
+        ]);
+
         $secretary = User::updateOrCreate(['email' => 'secretary@jefalprive.ma'], [
             'name' => 'Secretaire JEFAL',
             'password' => Hash::make('Password123!'),
@@ -49,6 +56,20 @@ class DemoDataSeeder extends Seeder
             'password' => Hash::make('Password123!'),
             'role' => 'visitor',
             'phone' => '+212600000005',
+        ]);
+
+        User::updateOrCreate(['email' => 'commercial1@jefalprive.ma'], [
+            'name' => 'Commercial JEFAL 1',
+            'password' => Hash::make('Password123!'),
+            'role' => 'commercial',
+            'phone' => '+212600000007',
+        ]);
+
+        User::updateOrCreate(['email' => 'commercial2@jefalprive.ma'], [
+            'name' => 'Commercial JEFAL 2',
+            'password' => Hash::make('Password123!'),
+            'role' => 'commercial',
+            'phone' => '+212600000008',
         ]);
 
         $room = Room::updateOrCreate(['name' => 'Salle A1'], [

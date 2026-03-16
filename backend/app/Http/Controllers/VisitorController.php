@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SchoolClass;
 use App\Models\User;
+use App\Services\LeadAssignmentService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -77,13 +78,17 @@ class VisitorController extends Controller
         return view('public.pre-registration');
     }
 
-    public function preRegistration(Request $request): RedirectResponse
+    public function preRegistration(Request $request, LeadAssignmentService $leadAssignmentService): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255'],
             'desired_program' => ['required', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:30'],
+            'message' => ['nullable', 'string'],
         ]);
+
+        $leadAssignmentService->createLead($validated);
 
         return back()->with('status', 'Pre-registration submitted.');
     }

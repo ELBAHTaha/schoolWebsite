@@ -8,7 +8,7 @@ class StoreAnnouncementRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('admin', 'secretary', 'professor') ?? false;
+        return $this->user()?->hasRole('admin', 'directeur', 'secretary', 'professor') ?? false;
     }
 
     public function rules(): array
@@ -16,7 +16,7 @@ class StoreAnnouncementRequest extends FormRequest
         return [
             'title' => ['required', 'string', 'max:255'],
             'content' => ['required', 'string'],
-            'target_role' => ['nullable', 'in:admin,secretary,professor,student,visitor'],
+            'target_role' => ['nullable', 'in:admin,directeur,secretary,professor,student,visitor,commercial'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
         ];

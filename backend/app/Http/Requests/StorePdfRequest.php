@@ -8,7 +8,7 @@ class StorePdfRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->hasRole('admin', 'secretary', 'professor') ?? false;
+        return $this->user()?->hasRole('admin', 'directeur', 'secretary', 'professor') ?? false;
     }
 
     public function rules(): array
