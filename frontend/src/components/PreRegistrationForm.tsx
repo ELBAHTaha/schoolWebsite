@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Send, CheckCircle2 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -17,16 +17,17 @@ const fallbackCourses = [
 
 interface PreRegistrationFormProps {
   onBack?: () => void;
+  initialProgram?: string | null;
 }
 
-export default function PreRegistrationForm({ onBack }: PreRegistrationFormProps) {
+export default function PreRegistrationForm({ onBack, initialProgram }: PreRegistrationFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
-    desired_program: "",
+    desired_program: initialProgram || "",
     message: "",
   });
 
@@ -36,6 +37,14 @@ export default function PreRegistrationForm({ onBack }: PreRegistrationFormProps
   });
 
   const courses = data?.data?.length ? data.data.map((c) => c.name) : fallbackCourses;
+  const courseOptions =
+    initialProgram && !courses.includes(initialProgram) ? [initialProgram, ...courses] : courses;
+
+  useEffect(() => {
+    if (initialProgram && !form.desired_program) {
+      setForm((prev) => ({ ...prev, desired_program: initialProgram }));
+    }
+  }, [initialProgram, form.desired_program]);
 
   const mutation = useMutation({
     mutationFn: () => apiPost("/pre-registration", form),
@@ -117,7 +126,7 @@ export default function PreRegistrationForm({ onBack }: PreRegistrationFormProps
               className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Choisir un programme...</option>
-              {courses.map((c) => (
+              {courseOptions.map((c) => (
                 <option key={c} value={c}>
                   {c}
                 </option>

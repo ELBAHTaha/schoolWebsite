@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, GraduationCap } from "lucide-react";
@@ -14,11 +14,31 @@ const programs = [
   { title: "Cours De Langues", cta: "Commencez Les Langues", image: "/images/programs/allemand.png", position: "50% 40%" },
 ];
 
-const VISIBLE = 3;
-
 export default function ProgramsShowcase() {
+  const [visible, setVisible] = useState(3);
   const [current, setCurrent] = useState(0);
-  const maxIndex = programs.length - VISIBLE;
+  const maxIndex = Math.max(programs.length - visible, 0);
+
+  useEffect(() => {
+    const updateVisible = () => {
+      const width = window.innerWidth;
+      if (width < 640) {
+        setVisible(1);
+      } else if (width < 1024) {
+        setVisible(2);
+      } else {
+        setVisible(3);
+      }
+    };
+
+    updateVisible();
+    window.addEventListener("resize", updateVisible);
+    return () => window.removeEventListener("resize", updateVisible);
+  }, []);
+
+  useEffect(() => {
+    setCurrent((c) => Math.min(c, maxIndex));
+  }, [maxIndex]);
 
   const prev = useCallback(() => setCurrent((c) => (c === 0 ? maxIndex : c - 1)), [maxIndex]);
   const next = useCallback(() => setCurrent((c) => (c >= maxIndex ? 0 : c + 1)), [maxIndex]);
@@ -55,27 +75,31 @@ export default function ProgramsShowcase() {
         </div>
 
         <div className="relative">
-          <button
-            onClick={prev}
-            className="absolute -left-4 md:-left-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
-          >
-            <ChevronLeft className="w-5 h-5" />
-          </button>
+          {maxIndex > 0 && (
+            <>
+              <button
+                onClick={prev}
+                className="absolute -left-4 md:-left-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+              >
+                <ChevronLeft className="w-5 h-5" />
+              </button>
 
-          <button
-            onClick={next}
-            className="absolute -right-4 md:-right-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
-          >
-            <ChevronRight className="w-5 h-5" />
-          </button>
+              <button
+                onClick={next}
+                className="absolute -right-4 md:-right-6 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-lg hover:opacity-90 transition-opacity"
+              >
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </>
+          )}
 
           <div className="overflow-hidden">
             <div
               className="flex transition-transform duration-500 ease-in-out"
-              style={{ transform: `translateX(-${current * (100 / VISIBLE)}%)` }}
+              style={{ transform: `translateX(-${current * (100 / visible)}%)` }}
             >
               {programs.map((p, i) => (
-                <div key={i} className="flex-shrink-0 px-3" style={{ width: `${100 / VISIBLE}%` }}>
+                <div key={i} className="flex-shrink-0 px-3" style={{ width: `${100 / visible}%` }}>
                   <div className="bg-card rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all group flex flex-col h-full border border-white/60 dark:border-white/10">
                     <div className="relative overflow-hidden aspect-[16/9]">
                       <img
@@ -92,7 +116,7 @@ export default function ProgramsShowcase() {
                       <h3 className="font-heading font-semibold text-foreground mb-4 text-base">{p.title}</h3>
                       <Link
                         to="/pre-registration"
-                        className="w-full inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-accent text-accent-foreground text-sm font-semibold hover:opacity-90 transition-opacity mt-auto shadow-sm"
+                        className="w-full inline-flex items-center justify-center px-5 py-2.5 rounded-full bg-accent text-accent-foreground text-xs sm:text-sm font-semibold hover:opacity-90 transition-opacity mt-auto shadow-sm"
                       >
                         {p.cta}
                       </Link>
@@ -104,17 +128,19 @@ export default function ProgramsShowcase() {
           </div>
         </div>
 
-        <div className="flex items-center justify-center gap-2 mt-8">
-          {Array.from({ length: totalDots }).map((_, i) => (
-            <button
-              key={i}
-              onClick={() => goTo(i)}
-              className={`w-2.5 h-2.5 rounded-full transition-all ${
-                i === current ? "bg-primary w-6" : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
-              }`}
-            />
-          ))}
-        </div>
+        {totalDots > 1 && (
+          <div className="flex items-center justify-center gap-2 mt-8">
+            {Array.from({ length: totalDots }).map((_, i) => (
+              <button
+                key={i}
+                onClick={() => goTo(i)}
+                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                  i === current ? "bg-primary w-6" : "bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                }`}
+              />
+            ))}
+          </div>
+        )}
 
         <div className="text-center mt-6 md:hidden">
           <Link to="/programs" className="inline-flex items-center gap-2 text-sm font-semibold text-primary">

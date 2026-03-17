@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreUserRequest extends FormRequest
 {
@@ -13,11 +14,25 @@ class StoreUserRequest extends FormRequest
 
     public function rules(): array
     {
+        $allowedRoles = [
+            'admin',
+            'directeur',
+            'secretary',
+            'professor',
+            'student',
+            'visitor',
+            'commercial',
+        ];
+
+        if (!$this->user()?->hasRole('admin')) {
+            $allowedRoles = ['professor', 'student', 'visitor'];
+        }
+
         return [
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8'],
-            'role' => ['required', 'in:admin,directeur,secretary,professor,student,visitor,commercial'],
+            'role' => ['required', Rule::in($allowedRoles)],
             'phone' => ['nullable', 'string', 'max:30'],
             'working_hours' => ['nullable', 'array'],
             'working_hours.*.day' => ['nullable', 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],

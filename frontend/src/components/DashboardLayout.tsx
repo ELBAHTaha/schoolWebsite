@@ -1,4 +1,4 @@
-﻿import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, BookOpen, DoorOpen, CreditCard, Megaphone,
@@ -90,7 +90,7 @@ interface Props {
 }
 
 export default function DashboardLayout({ children, role = "admin" }: Props) {
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -98,15 +98,33 @@ export default function DashboardLayout({ children, role = "admin" }: Props) {
   const navItems = buildNav(role);
   const basePath = `/dashboard/${role}`;
 
+  useEffect(() => {
+    const syncSidebar = () => {
+      if (window.innerWidth >= 1024) {
+        setSidebarOpen(true);
+      } else {
+        setSidebarOpen(false);
+      }
+    };
+
+    syncSidebar();
+    window.addEventListener("resize", syncSidebar);
+    return () => window.removeEventListener("resize", syncSidebar);
+  }, []);
+
   const handleLogout = async () => {
     await logout();
-    navigate('/login');
+    navigate("/login");
   };
 
   return (
     <div className="min-h-screen flex bg-background relative overflow-hidden">
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 flex flex-col bg-card/95 backdrop-blur-md text-foreground border-r border-border transition-all duration-300 w-64 overflow-hidden">
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-card/95 backdrop-blur-md text-foreground border-r border-border transition-transform duration-300 w-64 overflow-hidden ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } lg:translate-x-0`}
+      >
         {/* Logo */}
         <div className="flex items-center gap-3 px-4 h-16 border-b border-border flex-shrink-0">
           <img src="/logo.png" alt="JEFAL" className="h-9 w-auto flex-shrink-0" />
@@ -151,8 +169,17 @@ export default function DashboardLayout({ children, role = "admin" }: Props) {
         </div>
       </aside>
 
+      {sidebarOpen && (
+        <button
+          type="button"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-black/40 lg:hidden"
+          aria-label="Fermer le menu"
+        />
+      )}
+
       {/* Main */}
-      <div className="flex-1 flex flex-col transition-all duration-300 md:ml-64">
+      <div className="flex-1 flex flex-col transition-all duration-300 lg:ml-64">
         {/* Top bar */}
         <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border h-16 flex items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-3">
@@ -165,7 +192,7 @@ export default function DashboardLayout({ children, role = "admin" }: Props) {
             <div>
               <span className="text-xs text-muted-foreground">{roleLabels[role]}</span>
               <h2 className="text-sm font-semibold text-foreground leading-tight">
-                Bienvenue, {user?.name || 'Utilisateur'}
+                Bienvenue, {user?.name || "Utilisateur"}
               </h2>
             </div>
           </div>
@@ -188,10 +215,20 @@ export default function DashboardLayout({ children, role = "admin" }: Props) {
               </button>
               {profileOpen && (
                 <div className="absolute right-0 top-full mt-1 w-48 bg-card rounded-lg shadow-card-hover border border-border py-1 z-50">
-                  <Link to={`${basePath}/settings`} className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-secondary" onClick={() => setProfileOpen(false)}>
+                  <Link
+                    to={`${basePath}/settings`}
+                    className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-secondary"
+                    onClick={() => setProfileOpen(false)}
+                  >
                     <Settings className="w-4 h-4" /> Paramètres
                   </Link>
-                  <button onClick={() => { handleLogout(); setProfileOpen(false); }} className="flex items-center gap-2 px-4 py-2 text-sm text-accent hover:bg-secondary w-full text-left">
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setProfileOpen(false);
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-accent hover:bg-secondary w-full text-left"
+                  >
                     <LogOut className="w-4 h-4" /> Déconnexion
                   </button>
                 </div>

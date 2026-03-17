@@ -102,6 +102,23 @@ export default function UsersManagement() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
+  const isAdmin = currentUser?.role === "admin";
+
+  const roleOptions = isAdmin
+    ? [
+        { value: "student", label: "Étudiant" },
+        { value: "professor", label: "Professeur" },
+        { value: "secretary", label: "Secrétaire" },
+        { value: "commercial", label: "Commercial" },
+        { value: "directeur", label: "Directeur" },
+        { value: "admin", label: "Admin" },
+        { value: "visitor", label: "Visiteur" },
+      ]
+    : [
+        { value: "student", label: "Étudiant" },
+        { value: "professor", label: "Professeur" },
+        { value: "visitor", label: "Visiteur" },
+      ];
 
   const form = useForm<UserFormData>({
     resolver: zodResolver(userFormSchema),
@@ -347,13 +364,11 @@ export default function UsersManagement() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="student">Étudiant</SelectItem>
-                              <SelectItem value="professor">Professeur</SelectItem>
-                              <SelectItem value="secretary">Secrétaire</SelectItem>
-                              <SelectItem value="commercial">Commercial</SelectItem>
-                              <SelectItem value="directeur">Directeur</SelectItem>
-                              <SelectItem value="admin">Admin</SelectItem>
-                              <SelectItem value="visitor">Visiteur</SelectItem>
+                              {roleOptions.map((role) => (
+                                <SelectItem key={role.value} value={role.value}>
+                                  {role.label}
+                                </SelectItem>
+                              ))}
                             </SelectContent>
                           </Select>
                           <FormMessage />

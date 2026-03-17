@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'jefal-prive/school-management',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '06539fff939178ced59bda8ad06179d534e45d70',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -332,9 +332,9 @@
             ),
         ),
         'jefal-prive/school-management' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '06539fff939178ced59bda8ad06179d534e45d70',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

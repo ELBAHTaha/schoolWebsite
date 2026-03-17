@@ -15,7 +15,11 @@ const sessions = [
   { count: 0, label: "Cours particuliers", sub: "Prof particulier", bonus: "", multiplier: 2.2, isVip: true },
 ];
 
-export default function PackageConfigurator() {
+interface PackageConfiguratorProps {
+  initialProgram?: string | null;
+}
+
+export default function PackageConfigurator({ initialProgram }: PackageConfiguratorProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedDuration, setSelectedDuration] = useState(0);
   const [selectedSession, setSelectedSession] = useState(0);
@@ -305,7 +309,7 @@ export default function PackageConfigurator() {
                 Remplissez le formulaire ci-dessous et notre équipe vous contactera rapidement.
               </p>
 
-              <PreRegistrationForm onBack={handlePrevStep} />
+              <PreRegistrationForm onBack={handlePrevStep} initialProgram={initialProgram} />
             </motion.div>
           </div>
         )}

@@ -98,11 +98,25 @@ class AdminUsersController extends Controller
 
     public function update(Request $request, User $user): \Illuminate\Http\JsonResponse
     {
+        $allowedRoles = [
+            'admin',
+            'directeur',
+            'secretary',
+            'professor',
+            'student',
+            'visitor',
+            'commercial',
+        ];
+
+        if (!$request->user()?->hasRole('admin')) {
+            $allowedRoles = ['professor', 'student', 'visitor'];
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => ['nullable', 'string', 'min:8'],
-            'role' => ['required', 'in:admin,directeur,secretary,professor,student,visitor,commercial'],
+            'role' => ['required', Rule::in($allowedRoles)],
             'phone' => ['nullable', 'string', 'max:30'],
             'working_hours' => ['nullable', 'array'],
             'working_hours.*.day' => ['nullable', 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],

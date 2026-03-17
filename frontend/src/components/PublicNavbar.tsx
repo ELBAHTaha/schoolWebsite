@@ -1,6 +1,7 @@
 ﻿import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
+import { ThemeToggle } from "./ThemeToggle";
 
 const navLinks = [
   { label: "Accueil", href: "/" },
@@ -25,7 +26,8 @@ export default function PublicNavbar() {
         <div className="container mx-auto flex items-center justify-between h-18 px-4 lg:px-8 py-3">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
-             <div className="hidden sm:block leading-tight">
+            <img src="/logo.png" alt="JEFAL" className="h-9 w-auto" />
+            <div className="hidden sm:block leading-tight">
               <span className="block text-sm font-heading font-bold text-primary">Academy American International</span>
               <span className="block text-xs text-muted-foreground font-medium">JEFAL Privé — Settat</span>
             </div>
@@ -64,13 +66,21 @@ export default function PublicNavbar() {
             </Link>
           </div>
 
-          {/* Mobile toggle */}
-          <button
-            onClick={() => setOpen(!open)}
-            className="lg:hidden p-2 rounded-lg hover:bg-secondary"
-          >
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
+          {/* Mobile actions */}
+          <div className="lg:hidden flex items-center gap-2">
+            <Link
+              to="/login"
+              className="px-3 py-2 text-sm font-medium rounded-full border border-border text-foreground hover:text-primary transition-colors"
+            >
+              Connexion
+            </Link>
+            <button
+              onClick={() => setOpen(!open)}
+              className="p-2 rounded-lg hover:bg-secondary"
+            >
+              {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+          </div>
         </div>
 
         {/* Mobile menu */}
