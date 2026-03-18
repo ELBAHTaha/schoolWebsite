@@ -124,6 +124,14 @@ export default function UsersManagement() {
   const [search, setSearch] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentTarget, setPaymentTarget] = useState<any>(null);
+  const [paymentStatusTarget, setPaymentStatusTarget] = useState<"paid" | "pending">("paid");
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "",
+    date: new Date().toISOString().slice(0, 10),
+    months: "1",
+  });
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -256,6 +264,49 @@ export default function UsersManagement() {
       toast.error(error.message || "Erreur lors de la mise à jour du statut");
     },
   });
+
+  const openPaymentModal = (user: any, status: "paid" | "pending") => {
+    setPaymentTarget(user);
+    setPaymentStatusTarget(status);
+    setPaymentModalOpen(true);
+  };
+
+  const handleConfirmPaymentStatus = async () => {
+    if (!paymentTarget) {
+      return;
+    }
+    if (paymentStatusTarget === "paid") {
+      if (!paymentForm.amount || !paymentForm.date || !paymentForm.months) {
+        toast.error("Veuillez renseigner le montant, la date et le nombre de mois.");
+        return;
+      }
+      try {
+        await apiPost("/admin/payments", {
+          student_id: paymentTarget.id,
+          amount: parseFloat(paymentForm.amount),
+          status: "paid",
+          payment_date: paymentForm.date,
+          months: parseInt(paymentForm.months, 10),
+        });
+        await updatePaymentStatusMutation.mutateAsync({
+          user: paymentTarget,
+          status: "paid",
+        });
+      } catch (error: any) {
+        toast.error(error.message || "Erreur lors de la mise à jour du statut");
+        return;
+      }
+    } else {
+      await updatePaymentStatusMutation.mutateAsync({
+        user: paymentTarget,
+        status: "pending",
+      });
+    }
+
+    setPaymentModalOpen(false);
+    setPaymentTarget(null);
+    queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+  };
 
   const handleDeleteUser = (user: any) => {
     if (currentUser?.role === "directeur" && user.role === "admin") {
@@ -652,32 +703,20 @@ export default function UsersManagement() {
                     </td>
                     <td className="px-6 py-3">
                       {u.role === "student" ? (
-                        <div className="flex items-center gap-2">
-                          <Select
-                            defaultValue={u.payment_status || "pending"}
-                            onValueChange={(value) =>
-                              updatePaymentStatusMutation.mutate({
-                                user: u,
-                                status: value as "paid" | "pending" | "late",
-                              })
-                            }
-                          >
-                            <SelectTrigger className="w-[140px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="paid">Payé</SelectItem>
-                              <SelectItem value="pending">Non payé</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <span
-                            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                              paymentStatusStyles[u.payment_status || "pending"]
-                            }`}
-                          >
-                            {paymentStatusLabels[u.payment_status || "pending"]}
-                          </span>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openPaymentModal(
+                              u,
+                              (u.payment_status || "pending") === "paid" ? "paid" : "pending"
+                            )
+                          }
+                          className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                            paymentStatusStyles[u.payment_status || "pending"]
+                          }`}
+                        >
+                          {paymentStatusLabels[u.payment_status || "pending"]}
+                        </button>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
@@ -717,6 +756,73 @@ export default function UsersManagement() {
           </div>
         </div>
       </div>
+
+      <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Mettre à jour le paiement</DialogTitle>
+            <DialogDescription>
+              Choisissez le statut et complétez les informations du paiement.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <FormLabel>Statut</FormLabel>
+              <Select
+                value={paymentStatusTarget}
+                onValueChange={(value) => setPaymentStatusTarget(value as "paid" | "pending")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="paid">Payé</SelectItem>
+                  <SelectItem value="pending">Non payé</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {paymentStatusTarget === "paid" && (
+              <>
+                <div>
+                  <FormLabel>Montant</FormLabel>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <FormLabel>Date</FormLabel>
+                  <Input
+                    type="date"
+                    value={paymentForm.date}
+                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <FormLabel>Nombre de mois</FormLabel>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={paymentForm.months}
+                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, months: e.target.value }))}
+                  />
+                </div>
+              </>
+            )}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setPaymentModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="button" onClick={handleConfirmPaymentStatus}>
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

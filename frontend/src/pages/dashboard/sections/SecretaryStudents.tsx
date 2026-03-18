@@ -38,8 +38,8 @@ import { toast } from "sonner";
 
 const studentFormSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
-  email: z.string().email("Email invalide"),
-  password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+  email: z.string().email("Email invalide").optional(),
+  password: z.string().optional(),
   phone: z.string().optional(),
   class_id: z.string().optional(),
   class_ids: z.array(z.string()).optional(),
@@ -209,6 +209,9 @@ export default function SecretaryStudents() {
   const onSubmit = (formData: StudentFormData) => {
     if (editingStudent) {
       const updateData = { ...formData };
+      if (!updateData.email || updateData.email.trim() === "") {
+        updateData.email = editingStudent.email;
+      }
       if (!updateData.password) {
         delete updateData.password; // Don't send empty password for updates
       }
@@ -218,6 +221,18 @@ export default function SecretaryStudents() {
         data: updateData,
       });
     } else {
+      if (!formData.email || formData.email.trim() === "") {
+        form.setError("email", {
+          message: "Email invalide",
+        });
+        return;
+      }
+      if (!formData.password || formData.password.length < 8) {
+        form.setError("password", {
+          message: "Le mot de passe doit contenir au moins 8 caractères",
+        });
+        return;
+      }
       if (!formData.amount_paid || formData.amount_paid.trim() === "") {
         form.setError("amount_paid", {
           message: "Le montant payé est requis",
@@ -370,43 +385,47 @@ export default function SecretaryStudents() {
                         )}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    {!editingStudent && (
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="payment_status"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Statut de paiement</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Sélectionnez un statut" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="paid">Payé</SelectItem>
+                                  <SelectItem value="pending">En attente</SelectItem>
+                                  <SelectItem value="late">En retard</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+                    {!editingStudent && (
                       <FormField
                         control={form.control}
-                        name="payment_status"
+                        name="amount_paid"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Statut de paiement</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionnez un statut" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="paid">Payé</SelectItem>
-                                <SelectItem value="pending">En attente</SelectItem>
-                                <SelectItem value="late">En retard</SelectItem>
-                              </SelectContent>
-                            </Select>
+                            <FormLabel>Montant payé</FormLabel>
+                            <FormControl>
+                              <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                            </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="amount_paid"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Montant payé</FormLabel>
-                          <FormControl>
-                            <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    )}
                     <div className="flex justify-end gap-3 pt-4">
                       <Button
                         type="button"

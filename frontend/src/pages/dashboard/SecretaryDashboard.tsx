@@ -41,14 +41,10 @@ export default function SecretaryDashboard() {
     ? [
         { label: "Étudiants actifs", value: String(data.stats.students), icon: Users, color: "bg-primary/10 text-primary" },
         { label: "Paiements du jour", value: String(data.stats.payments_today), icon: CreditCard, color: "bg-success/10 text-success" },
-        { label: "Reçus à envoyer", value: String(data.stats.receipts), icon: FileText, color: "bg-warning/10 text-warning" },
-        { label: "Demandes", value: String(data.stats.requests), icon: ClipboardList, color: "bg-accent/10 text-accent" },
       ]
     : [
         { label: "Étudiants actifs", value: "512", icon: Users, color: "bg-primary/10 text-primary" },
         { label: "Paiements du jour", value: "8", icon: CreditCard, color: "bg-success/10 text-success" },
-        { label: "Reçus à envoyer", value: "5", icon: FileText, color: "bg-warning/10 text-warning" },
-        { label: "Demandes", value: "12", icon: ClipboardList, color: "bg-accent/10 text-accent" },
       ];
 
   const students = (studentsData?.data || []).slice(0, 8).map((student) => ({

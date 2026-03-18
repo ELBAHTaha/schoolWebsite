@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class SecretaryPaymentsController extends Controller
 {
@@ -41,6 +42,7 @@ class SecretaryPaymentsController extends Controller
             'amount' => ['required', 'numeric', 'min:0.01'],
             'status' => ['required', 'in:paid,pending,late'],
             'payment_date' => ['nullable', 'date'],
+            'months' => ['nullable', 'integer', 'min:1'],
         ]);
 
         $student = User::findOrFail($validated['student_id']);
@@ -50,14 +52,27 @@ class SecretaryPaymentsController extends Controller
             $paymentDate = isset($validated['payment_date'])
                 ? Carbon::parse($validated['payment_date'])
                 : now();
-            $payment = Payment::create([
-                ...$validated,
-                'month' => (int) $paymentDate->month,
-                'year' => (int) $paymentDate->year,
-            ]);
+            $months = (int) ($validated['months'] ?? 1);
+            $perMonthAmount = round(((float) $validated['amount']) / max(1, $months), 2);
+            $batchId = (string) Str::uuid();
+            for ($i = 0; $i < $months; $i++) {
+                $date = (clone $paymentDate)->addMonths($i);
+                Payment::updateOrCreate(
+                    [
+                        'student_id' => $student->id,
+                        'month' => (int) $date->month,
+                        'year' => (int) $date->year,
+                    ],
+                    [
+                        'amount' => $perMonthAmount,
+                        'status' => $validated['status'],
+                        'transaction_id' => $batchId,
+                    ]
+                );
+            }
 
             // Update student balance and status
-            $this->applyBalanceDelta($student, 0, $payment->amount);
+            $this->applyBalanceDelta($student, 0, (float) $validated['amount']);
             $this->refreshStudentStatus($student);
         });
 

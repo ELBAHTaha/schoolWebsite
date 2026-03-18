@@ -48,10 +48,10 @@ class SecretaryStudentsController extends Controller
                 'phone' => $student->phone,
                 'class_name' => $student->schoolClass?->name,
                 'class_names' => $student->classes->pluck('name')->values(),
-                'class_ids' => $student->classes->pluck('id')->values(),
+                'class_ids' => $student->classes->pluck('classes.id')->values(),
                 'account_balance' => $student->account_balance,
                 'payment_status' => $student->payment_status,
-                'last_payment_amount' => $student->payments->first()?->amount,
+                'last_payment_amount' => $this->latestPaymentTotal($student),
                 'last_payment_date' => $student->payments->first()?->created_at?->toDateString(),
                 'status' => 'Actif', // Could be based on some logic
                 'created_at' => $student->created_at?->toDateString(),
@@ -105,6 +105,7 @@ class SecretaryStudentsController extends Controller
                 'status' => 'paid',
                 'month' => (int) $now->month,
                 'year' => (int) $now->year,
+                'transaction_id' => (string) \Illuminate\Support\Str::uuid(),
             ]);
         }
 
@@ -121,7 +122,7 @@ class SecretaryStudentsController extends Controller
                 'phone' => $student->phone,
                 'class_name' => $student->schoolClass?->name,
                 'class_names' => $student->classes()->pluck('name'),
-                'class_ids' => $student->classes()->pluck('id'),
+                'class_ids' => $student->classes()->pluck('classes.id'),
                 'account_balance' => $student->account_balance,
                 'payment_status' => $student->payment_status,
             ],
@@ -183,7 +184,7 @@ class SecretaryStudentsController extends Controller
                 'phone' => $student->phone,
                 'class_name' => $student->schoolClass?->name,
                 'class_names' => $student->classes()->pluck('name'),
-                'class_ids' => $student->classes()->pluck('id'),
+                'class_ids' => $student->classes()->pluck('classes.id'),
                 'account_balance' => $student->account_balance,
                 'payment_status' => $student->payment_status,
             ],
@@ -201,5 +202,20 @@ class SecretaryStudentsController extends Controller
         return response()->json([
             'message' => 'Étudiant supprimé avec succès',
         ]);
+    }
+
+    private function latestPaymentTotal(User $student): float
+    {
+        $latestPayment = $student->payments->first();
+        if (!$latestPayment) {
+            return 0.0;
+        }
+        $batchId = $latestPayment->transaction_id;
+        if ($batchId) {
+            return (float) Payment::where('student_id', $student->id)
+                ->where('transaction_id', $batchId)
+                ->sum('amount');
+        }
+        return (float) $latestPayment->amount;
     }
 }

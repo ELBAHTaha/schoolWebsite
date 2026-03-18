@@ -72,6 +72,8 @@ Route::middleware(['web', 'auth', 'role:admin,directeur'])
             ->name('api.admin.classes.destroy');
         Route::get('/admin/payments', [AdminPaymentsController::class, 'index'])
             ->name('api.admin.payments.index');
+        Route::post('/admin/payments', [AdminPaymentsController::class, 'store'])
+            ->name('api.admin.payments.store');
     });
 
 Route::middleware(['web', 'auth', 'role:student'])
@@ -108,9 +110,9 @@ Route::middleware(['web', 'auth', 'role:secretary'])
             ->name('api.secretary.students.index');
         Route::post('/students', [SecretaryStudentsController::class, 'store'])
             ->name('api.secretary.students.store');
-        Route::put('/students/{user}', [SecretaryStudentsController::class, 'update'])
+        Route::put('/students/{student}', [SecretaryStudentsController::class, 'update'])
             ->name('api.secretary.students.update');
-        Route::delete('/students/{user}', [SecretaryStudentsController::class, 'destroy'])
+        Route::delete('/students/{student}', [SecretaryStudentsController::class, 'destroy'])
             ->name('api.secretary.students.destroy');
         Route::get('/classes', [SecretaryClassesController::class, 'index'])
             ->name('api.secretary.classes.index');
