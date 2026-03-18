@@ -32,6 +32,10 @@ const studentFormSchema = z.object({
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
   phone: z.string().optional(),
   class_id: z.string().min(1, "La classe est requise"),
+  payment_status: z.enum(["paid", "pending", "late"], {
+    required_error: "Le statut de paiement est requis",
+  }),
+  amount_paid: z.string().min(1, "Le montant payé est requis"),
   notes: z.string().optional(),
 });
 
@@ -48,6 +52,8 @@ export default function SecretaryAddStudent() {
       password: "",
       phone: "",
       class_id: "",
+      payment_status: "pending",
+      amount_paid: "",
       notes: "",
     },
   });
@@ -56,6 +62,7 @@ export default function SecretaryAddStudent() {
     mutationFn: (data: StudentFormData) => apiPost("/secretary/students", {
       ...data,
       class_id: data.class_id ? parseInt(data.class_id) : null,
+      amount_paid: parseFloat(data.amount_paid),
     }),
     onSuccess: () => {
       form.reset();
@@ -159,6 +166,43 @@ export default function SecretaryAddStudent() {
                   </FormItem>
                 )}
               />
+              <div className="grid md:grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="payment_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Statut de paiement</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Sélectionnez un statut" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="paid">Payé</SelectItem>
+                          <SelectItem value="pending">En attente</SelectItem>
+                          <SelectItem value="late">En retard</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="amount_paid"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Montant payé</FormLabel>
+                      <FormControl>
+                        <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
               <FormField
                 control={form.control}
                 name="notes"

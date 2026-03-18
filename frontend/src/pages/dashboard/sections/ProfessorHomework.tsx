@@ -67,6 +67,13 @@ interface AssignmentsResponse {
   current_page: number;
 }
 
+interface ClassesResponse {
+  data: Array<{
+    id: number;
+    name: string;
+  }>;
+}
+
 const mockAssignments = [
   { id: 1, title: "Essay Writing", className: "TOEFL", due: "2026-03-18", status: "À corriger" },
   { id: 2, title: "Compréhension orale", className: "DELF B2", due: "2026-03-12", status: "En cours" },
@@ -91,13 +98,39 @@ export default function ProfessorHomework() {
     queryFn: () => apiGet<AssignmentsResponse>("/professor/assignments"),
   });
 
+  const { data: classesData } = useQuery({
+    queryKey: ["professor-classes"],
+    queryFn: () => apiGet<ClassesResponse>("/professor/classes"),
+  });
+
+  const createAssignmentMutation = useMutation({
+    mutationFn: (payload: AssignmentFormData) =>
+      apiPost("/professor/assignments", {
+        ...payload,
+        class_id: parseInt(payload.class_id),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["professor-assignments"] });
+      setIsAddModalOpen(false);
+      form.reset();
+      toast.success("Devoir créé avec succès");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erreur lors de la création du devoir");
+    },
+  });
+
   const onSubmit = (data: AssignmentFormData) => {
     createAssignmentMutation.mutate(data);
   };
 
-  const handleModalClose = () => {
-    setIsAddModalOpen(false);
-    form.reset();
+  const handleModalClose = (open: boolean) => {
+    if (!open) {
+      setIsAddModalOpen(false);
+      form.reset();
+      return;
+    }
+    setIsAddModalOpen(true);
   };
 
   const assignments = data
@@ -179,10 +212,11 @@ export default function ProfessorHomework() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="1">DELF B2</SelectItem>
-                                <SelectItem value="2">TOEFL</SelectItem>
-                                <SelectItem value="3">IELTS</SelectItem>
-                                <SelectItem value="4">TEF</SelectItem>
+                                {(classesData?.data || []).map((classItem) => (
+                                  <SelectItem key={classItem.id} value={String(classItem.id)}>
+                                    {classItem.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />

@@ -6,9 +6,12 @@ use App\Http\Controllers\Api\PublicFormController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\AdminClassesController;
 use App\Http\Controllers\Api\AdminPaymentsController;
+use App\Http\Controllers\Api\AdminAnnouncementsController;
+use App\Http\Controllers\Api\AdminRoomsController;
 use App\Http\Controllers\Api\AdminUsersController;
 use App\Http\Controllers\Api\CommercialLeadsController;
 use App\Http\Controllers\Api\ProfessorAssignmentsController;
+use App\Http\Controllers\Api\SecretaryClassesController;
 use App\Http\Controllers\Api\SecretaryPaymentsController;
 use App\Http\Controllers\Api\SecretaryStudentsController;
 use App\Http\Controllers\Auth\AuthController;
@@ -49,6 +52,16 @@ Route::middleware(['web', 'auth', 'role:admin,directeur'])
             ->name('api.admin.users.update');
         Route::delete('/admin/users/{user}', [AdminUsersController::class, 'destroy'])
             ->name('api.admin.users.destroy');
+        Route::get('/admin/rooms', [AdminRoomsController::class, 'index'])
+            ->name('api.admin.rooms.index');
+        Route::post('/admin/rooms', [AdminRoomsController::class, 'store'])
+            ->name('api.admin.rooms.store');
+        Route::put('/admin/rooms/{room}', [AdminRoomsController::class, 'update'])
+            ->name('api.admin.rooms.update');
+        Route::delete('/admin/rooms/{room}', [AdminRoomsController::class, 'destroy'])
+            ->name('api.admin.rooms.destroy');
+        Route::post('/admin/announcements', [AdminAnnouncementsController::class, 'store'])
+            ->name('api.admin.announcements.store');
         Route::get('/admin/classes', [AdminClassesController::class, 'index'])
             ->name('api.admin.classes.index');
         Route::post('/admin/classes', [AdminClassesController::class, 'store'])
@@ -72,6 +85,8 @@ Route::middleware(['web', 'auth', 'role:professor'])
 Route::middleware(['web', 'auth', 'role:professor'])
     ->prefix('professor')
     ->group(function () {
+        Route::get('/classes', [ProfessorAssignmentsController::class, 'classes'])
+            ->name('api.professor.classes.index');
         Route::get('/assignments', [ProfessorAssignmentsController::class, 'index'])
             ->name('api.professor.assignments.index');
         Route::post('/assignments', [ProfessorAssignmentsController::class, 'store'])
@@ -97,6 +112,10 @@ Route::middleware(['web', 'auth', 'role:secretary'])
             ->name('api.secretary.students.update');
         Route::delete('/students/{user}', [SecretaryStudentsController::class, 'destroy'])
             ->name('api.secretary.students.destroy');
+        Route::get('/classes', [SecretaryClassesController::class, 'index'])
+            ->name('api.secretary.classes.index');
+        Route::post('/classes', [SecretaryClassesController::class, 'store'])
+            ->name('api.secretary.classes.store');
         Route::get('/payments', [SecretaryPaymentsController::class, 'index'])
             ->name('api.secretary.payments.index');
         Route::post('/payments', [SecretaryPaymentsController::class, 'store'])

@@ -11,6 +11,18 @@ use Illuminate\Support\Facades\Storage;
 
 class ProfessorAssignmentsController extends Controller
 {
+    public function classes(Request $request): JsonResponse
+    {
+        $classes = SchoolClass::query()
+            ->where('professor_id', $request->user()->id)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return response()->json([
+            'data' => $classes,
+        ]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $classIds = SchoolClass::where('professor_id', $request->user()->id)->pluck('id');

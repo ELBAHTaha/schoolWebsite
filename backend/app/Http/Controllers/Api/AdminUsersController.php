@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -20,7 +20,9 @@ class AdminUsersController extends Controller
         $role = trim((string) $request->query('role', ''));
         $limit = max(1, min(100, (int) $request->query('limit', 20)));
 
-        $query = User::query()->orderByDesc('created_at');
+        $query = User::query()
+            ->with(['classes', 'schoolClass'])
+            ->orderByDesc('created_at');
 
         if ($search !== '') {
             $query->where(function ($q) use ($search) {
@@ -45,6 +47,8 @@ class AdminUsersController extends Controller
                 'phone' => $user->phone,
                 'role' => $user->role,
                 'status' => $user->role === 'visitor' ? 'inactive' : 'active',
+                'class_ids' => $user->classes->pluck('id')->values(),
+                'payment_status' => $user->payment_status,
                 'created_at' => optional($user->created_at)->toDateString(),
             ]),
             'total' => $total,
@@ -55,8 +59,17 @@ class AdminUsersController extends Controller
     {
         $validated = $request->validated();
         $workingHours = $validated['working_hours'] ?? [];
+        $classIds = $validated['class_ids'] ?? [];
+        $paymentStatus = $validated['payment_status'] ?? null;
         unset($validated['working_hours']);
+        unset($validated['class_ids']);
+        unset($validated['payment_status']);
         $plainPassword = $validated['password'];
+        $classId = $validated['class_id'] ?? null;
+
+        if (empty($classId) && !empty($classIds)) {
+            $classId = $classIds[0];
+        }
 
         $user = User::create([
             'name' => $validated['name'],
@@ -64,7 +77,12 @@ class AdminUsersController extends Controller
             'password' => Hash::make($plainPassword),
             'role' => $validated['role'],
             'phone' => $validated['phone'] ?? null,
+            'class_id' => $validated['role'] === 'student' ? $classId : null,
+            'payment_status' => $validated['role'] === 'student' ? ($paymentStatus ?? 'pending') : null,
         ]);
+        if ($user->role === 'student' && !empty($classIds)) {
+            $user->classes()->sync($classIds);
+        }
         if ($user->role === 'professor') {
             $slots = collect($workingHours)
                 ->filter(fn ($slot) => !empty($slot['day']) && !empty($slot['starts_at']) && !empty($slot['ends_at']));
@@ -80,7 +98,14 @@ class AdminUsersController extends Controller
         }
 
         $loginUrl = rtrim(config('app.frontend_url'), '/') . '/login';
-        Mail::to($user->email)->send(new AccountCreatedMail($user, $plainPassword, $loginUrl));
+        try {
+            Mail::to($user->email)->send(new AccountCreatedMail($user, $plainPassword, $loginUrl));
+        } catch (\Throwable $e) {
+            logger()->warning('Failed to send account created email.', [
+                'userId' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Utilisateur crÃ©Ã© avec succÃ¨s',
@@ -118,6 +143,10 @@ class AdminUsersController extends Controller
             'password' => ['nullable', 'string', 'min:8'],
             'role' => ['required', Rule::in($allowedRoles)],
             'phone' => ['nullable', 'string', 'max:30'],
+            'class_id' => ['nullable', 'integer', 'exists:classes,id'],
+            'class_ids' => ['nullable', 'array'],
+            'class_ids.*' => ['integer', 'exists:classes,id'],
+            'payment_status' => ['nullable', 'in:paid,pending,late'],
             'working_hours' => ['nullable', 'array'],
             'working_hours.*.day' => ['nullable', 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
             'working_hours.*.starts_at' => ['nullable', 'date_format:H:i'],
@@ -125,7 +154,11 @@ class AdminUsersController extends Controller
         ]);
 
         $workingHours = $validated['working_hours'] ?? null;
+        $classIds = $validated['class_ids'] ?? null;
+        $paymentStatus = $validated['payment_status'] ?? null;
         unset($validated['working_hours']);
+        unset($validated['class_ids']);
+        unset($validated['payment_status']);
 
         $updateData = [
             'name' => $validated['name'],
@@ -138,7 +171,27 @@ class AdminUsersController extends Controller
             $updateData['password'] = Hash::make($validated['password']);
         }
 
+        if ($validated['role'] === 'student') {
+            $classId = $validated['class_id'] ?? null;
+            if (empty($classId) && is_array($classIds) && !empty($classIds)) {
+                $classId = $classIds[0];
+            }
+            $updateData['class_id'] = $classId;
+            if ($paymentStatus) {
+                $updateData['payment_status'] = $paymentStatus;
+            }
+        } else {
+            $updateData['class_id'] = null;
+            $updateData['payment_status'] = null;
+        }
+
         $user->update($updateData);
+
+        if ($validated['role'] !== 'student') {
+            $user->classes()->detach();
+        } elseif (is_array($classIds)) {
+            $user->classes()->sync($classIds);
+        }
 
         if ($validated['role'] !== 'professor') {
             $user->workingHours()->delete();

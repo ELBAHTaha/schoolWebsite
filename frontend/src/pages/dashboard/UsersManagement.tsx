@@ -32,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -43,6 +44,8 @@ const userFormSchema = z.object({
     required_error: "Le rôle est requis",
   }),
   phone: z.string().optional(),
+  class_ids: z.array(z.string()).optional(),
+  payment_status: z.enum(["paid", "pending", "late"]).optional(),
   working_hours: z
     .array(
       z.object({
@@ -84,6 +87,18 @@ const roleLabels: Record<string, string> = {
   commercial: "Commercial",
 };
 
+const paymentStatusLabels: Record<string, string> = {
+  paid: "Payé",
+  pending: "Non payé",
+  late: "Non payé",
+};
+
+const paymentStatusStyles: Record<string, string> = {
+  paid: "bg-success/10 text-success",
+  pending: "bg-warning/10 text-warning",
+  late: "bg-warning/10 text-warning",
+};
+
 interface UsersResponse {
   data: Array<{
     id: number;
@@ -92,8 +107,17 @@ interface UsersResponse {
     phone?: string | null;
     role: string;
     status: string;
+    class_ids?: number[];
+    payment_status?: string;
   }>;
   total: number;
+}
+
+interface ClassesResponse {
+  data: Array<{
+    id: number;
+    name: string;
+  }>;
 }
 
 export default function UsersManagement() {
@@ -128,6 +152,8 @@ export default function UsersManagement() {
       password: "",
       role: "student",
       phone: "",
+      class_ids: [],
+      payment_status: "pending",
       working_hours: [{ day: "", starts_at: "", ends_at: "" }],
     },
   });
@@ -143,8 +169,18 @@ export default function UsersManagement() {
     queryFn: () => apiGet<UsersResponse>(`/admin/users?search=${encodeURIComponent(search)}`),
   });
 
+  const { data: classesData } = useQuery({
+    queryKey: ["public-classes"],
+    queryFn: () => apiGet<ClassesResponse>("/classes"),
+  });
+
   const createUserMutation = useMutation({
-    mutationFn: (data: UserFormData) => apiPost("/admin/users", data),
+    mutationFn: (data: UserFormData) =>
+      apiPost("/admin/users", {
+        ...data,
+        class_ids: data.role === "student" ? (data.class_ids || []).map((id) => parseInt(id)) : [],
+        payment_status: data.role === "student" ? data.payment_status : undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       setIsAddModalOpen(false);
@@ -158,7 +194,14 @@ export default function UsersManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: Partial<UserFormData> }) =>
-      apiPut(`/admin/users/${id}`, data),
+      apiPut(`/admin/users/${id}`, {
+        ...data,
+        class_ids:
+          data.role === "student"
+            ? (data.class_ids || []).map((id) => parseInt(id))
+            : [],
+        payment_status: data.role === "student" ? data.payment_status : undefined,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       setEditingUser(null);
@@ -189,9 +232,30 @@ export default function UsersManagement() {
       password: "", // Don't prefill password
       role: user.role,
       phone: user.phone || "",
+      class_ids: (user.class_ids || []).map((id: number) => String(id)),
+      payment_status: user.payment_status || "pending",
       working_hours: [{ day: "", starts_at: "", ends_at: "" }],
     });
   };
+
+  const updatePaymentStatusMutation = useMutation({
+    mutationFn: (payload: { user: any; status: "paid" | "pending" | "late" }) =>
+      apiPut(`/admin/users/${payload.user.id}`, {
+        name: payload.user.name,
+        email: payload.user.email,
+        role: payload.user.role,
+        phone: payload.user.phone || "",
+        class_ids: payload.user.class_ids || [],
+        payment_status: payload.status,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      toast.success("Statut de paiement mis à jour");
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Erreur lors de la mise à jour du statut");
+    },
+  });
 
   const handleDeleteUser = (user: any) => {
     if (currentUser?.role === "directeur" && user.role === "admin") {
@@ -228,11 +292,19 @@ export default function UsersManagement() {
       if (!updateData.password) {
         delete updateData.password; // Don't send empty password for updates
       }
+      if (updateData.role !== "student") {
+        delete updateData.class_ids;
+        delete updateData.payment_status;
+      }
       updateUserMutation.mutate({
         id: editingUser.id,
         data: updateData,
       });
     } else {
+      if (preparedData.role !== "student") {
+        delete preparedData.class_ids;
+        delete preparedData.payment_status;
+      }
       createUserMutation.mutate(preparedData as Required<UserFormData>);
     }
   };
@@ -265,6 +337,8 @@ export default function UsersManagement() {
         role: user.role,
         roleLabel: roleLabels[user.role] ?? "Utilisateur",
         status: user.status === "inactive" ? "Inactif" : "Actif",
+        class_ids: user.class_ids || [],
+        payment_status: user.payment_status,
       }))
     : fallbackUsers;
 
@@ -388,6 +462,71 @@ export default function UsersManagement() {
                         </FormItem>
                       )}
                     />
+                    {selectedRole === "student" && (
+                      <FormField
+                        control={form.control}
+                        name="class_ids"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Cours suivis</FormLabel>
+                            <div className="grid grid-cols-2 gap-3 rounded-lg border border-input bg-background p-3">
+                              {(classesData?.data || []).map((classItem) => {
+                                const isChecked = (field.value || []).includes(String(classItem.id));
+                                return (
+                                  <label
+                                    key={classItem.id}
+                                    className="flex items-center gap-2 text-sm text-foreground"
+                                  >
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...current, String(classItem.id)]);
+                                        } else {
+                                          field.onChange(current.filter((id) => id !== String(classItem.id)));
+                                        }
+                                      }}
+                                    />
+                                    {classItem.name}
+                                  </label>
+                                );
+                              })}
+                              {!classesData?.data?.length && (
+                                <div className="text-xs text-muted-foreground">
+                                  Aucune classe disponible.
+                                </div>
+                              )}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    {selectedRole === "student" && (
+                      <FormField
+                        control={form.control}
+                        name="payment_status"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Statut de paiement</FormLabel>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Sélectionnez un statut" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="paid">Payé</SelectItem>
+                                <SelectItem value="pending">En attente</SelectItem>
+                                <SelectItem value="late">Non payé</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                     {selectedRole === "professor" && (
                       <div className="space-y-3 rounded-lg border border-border p-3">
                         <div className="flex items-center justify-between">
@@ -491,6 +630,7 @@ export default function UsersManagement() {
                   <th className="text-left px-6 py-3 font-medium text-muted-foreground">Email</th>
                   <th className="text-left px-6 py-3 font-medium text-muted-foreground">Rôle</th>
                   <th className="text-left px-6 py-3 font-medium text-muted-foreground">Statut</th>
+                  <th className="text-left px-6 py-3 font-medium text-muted-foreground">Paiement</th>
                   <th className="text-left px-6 py-3 font-medium text-muted-foreground">Actions</th>
                 </tr>
               </thead>
@@ -509,6 +649,38 @@ export default function UsersManagement() {
                       <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${u.status === "Actif" ? "bg-success/10 text-success" : "bg-muted text-muted-foreground"}`}>
                         {u.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-3">
+                      {u.role === "student" ? (
+                        <div className="flex items-center gap-2">
+                          <Select
+                            defaultValue={u.payment_status || "pending"}
+                            onValueChange={(value) =>
+                              updatePaymentStatusMutation.mutate({
+                                user: u,
+                                status: value as "paid" | "pending" | "late",
+                              })
+                            }
+                          >
+                            <SelectTrigger className="w-[140px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="paid">Payé</SelectItem>
+                              <SelectItem value="pending">Non payé</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <span
+                            className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                              paymentStatusStyles[u.payment_status || "pending"]
+                            }`}
+                          >
+                            {paymentStatusLabels[u.payment_status || "pending"]}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </td>
                     <td className="px-6 py-3">
                       <div className="flex items-center gap-1">

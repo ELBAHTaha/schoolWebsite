@@ -5,6 +5,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { apiPost, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import PackageConfigurator from "@/components/home/PackageConfigurator";
 
 interface LoginResponse {
   user: {
@@ -93,7 +94,7 @@ export default function Login() {
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        className={`w-full ${isLogin ? "max-w-md" : "max-w-5xl"}`}
       >
         <div className="bg-card rounded-3xl shadow-float p-8">
           <div className="text-center mb-8">
@@ -212,9 +213,12 @@ export default function Login() {
 
           <div className="mt-6 text-center text-sm text-muted-foreground">
             {isLogin ? "Pas encore de compte ?" : "Déjà inscrit ?"}{" "}
-            <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-semibold hover:underline">
+            <Link
+              to={isLogin ? "/pre-registration" : "/login"}
+              className="text-primary font-semibold hover:underline"
+            >
               {isLogin ? "S'inscrire" : "Se connecter"}
-            </button>
+            </Link>
           </div>
         </div>
 
@@ -223,6 +227,12 @@ export default function Login() {
             ← Retour à l'accueil
           </Link>
         </div>
+
+        {!isLogin && (
+          <div className="mt-10">
+            <PackageConfigurator />
+          </div>
+        )}
       </motion.div>
     </div>
   );

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 class SecretaryPaymentsController extends Controller
 {
@@ -46,10 +47,13 @@ class SecretaryPaymentsController extends Controller
         $this->assertStudent($student);
 
         DB::transaction(function () use ($validated, $student) {
+            $paymentDate = isset($validated['payment_date'])
+                ? Carbon::parse($validated['payment_date'])
+                : now();
             $payment = Payment::create([
                 ...$validated,
-                'recorded_by' => $request->user()->id,
-                'payment_date' => $validated['payment_date'] ?? now(),
+                'month' => (int) $paymentDate->month,
+                'year' => (int) $paymentDate->year,
             ]);
 
             // Update student balance and status

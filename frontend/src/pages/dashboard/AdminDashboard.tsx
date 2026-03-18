@@ -1,5 +1,5 @@
 ﻿import { motion } from "framer-motion";
-import { Users, BookOpen, CreditCard, GraduationCap, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Users, CreditCard, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -8,9 +8,7 @@ import { apiGet } from "@/lib/api";
 
 const baseStatsCards = [
   { key: "students", label: "Total étudiants", value: "1,247", change: "+12%", up: true, icon: Users, color: "bg-primary/10 text-primary" },
-  { key: "classes", label: "Classes actives", value: "34", change: "+3", up: true, icon: BookOpen, color: "bg-success/10 text-success" },
   { key: "monthly_revenue", label: "Revenus du mois", value: "145,000 DH", change: "+8%", up: true, icon: CreditCard, color: "bg-gold/10 text-gold" },
-  { key: "success_rate", label: "Taux de réussite", value: "95%", change: "-1%", up: false, icon: GraduationCap, color: "bg-accent/10 text-accent" },
 ];
 
 const fallbackRecentStudents = [
@@ -38,7 +36,6 @@ const paymentStatusLabels: Record<string, string> = {
 interface AdminDashboardResponse {
   stats: {
     students: number;
-    classes: number;
     monthly_revenue: number;
     success_rate: number | null;
   };
@@ -66,14 +63,8 @@ export default function AdminDashboard() {
     switch (card.key) {
       case "students":
         return { ...card, value: formatNumber(data.stats.students) };
-      case "classes":
-        return { ...card, value: formatNumber(data.stats.classes) };
       case "monthly_revenue":
         return { ...card, value: formatCurrency(data.stats.monthly_revenue) };
-      case "success_rate":
-        return data.stats.success_rate === null
-          ? card
-          : { ...card, value: `${data.stats.success_rate}%` };
       default:
         return card;
     }

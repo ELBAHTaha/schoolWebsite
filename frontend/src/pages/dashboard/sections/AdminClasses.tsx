@@ -97,6 +97,15 @@ export default function AdminClasses() {
     createClassMutation.mutate(data);
   };
 
+  const handleModalClose = (open: boolean) => {
+    if (!open) {
+      setIsAddModalOpen(false);
+      form.reset();
+      return;
+    }
+    setIsAddModalOpen(true);
+  };
+
   const filteredClasses = classes.filter((classItem) =>
     classItem.name.toLowerCase().includes(search.toLowerCase()) ||
     classItem.professor.toLowerCase().includes(search.toLowerCase()) ||

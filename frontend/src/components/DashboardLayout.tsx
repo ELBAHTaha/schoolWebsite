@@ -2,7 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, BookOpen, DoorOpen, CreditCard, Megaphone,
-  Settings, Menu, X, Bell, ChevronDown, LogOut, User,
+  Settings, Menu, X, Bell, ChevronDown, LogOut,
   FileText, Calendar, Download, ClipboardList
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -21,10 +21,8 @@ const buildNav = (role: string): NavItem[] => {
       return [
         { label: "Tableau de bord", href: base, icon: LayoutDashboard },
         { label: "Étudiants", href: `${base}/students`, icon: Users },
-        { label: "Ajouter étudiant", href: `${base}/add-student`, icon: User },
         { label: "Classes", href: `${base}/classes`, icon: BookOpen },
         { label: "Paiements", href: `${base}/payments`, icon: CreditCard },
-        { label: "Reçus", href: `${base}/receipts`, icon: FileText },
         { label: "Annonces", href: `${base}/announcements`, icon: Megaphone },
       ];
     case "professor":

@@ -19,7 +19,12 @@ class SecretaryStudentsController extends Controller
         $search = trim((string) $request->query('search', ''));
         $classId = trim((string) $request->query('class_id', ''));
 
-        $query = User::with('schoolClass')
+        $limit = max(1, min(200, (int) $request->query('limit', 20)));
+        $query = User::with([
+                'schoolClass',
+                'classes',
+                'payments' => fn ($q) => $q->latest()->limit(1),
+            ])
             ->where('role', 'student');
 
         if ($search !== '') {
@@ -33,10 +38,7 @@ class SecretaryStudentsController extends Controller
             $query->where('class_id', $classId);
         }
 
-        $students = $query->latest()->paginate(20);
-
-        $loginUrl = rtrim(config('app.frontend_url'), '/') . '/login';
-        Mail::to($student->email)->send(new AccountCreatedMail($student, $plainPassword, $loginUrl));
+        $students = $query->latest()->paginate($limit);
 
         return response()->json([
             'data' => $students->map(fn (User $student) => [
@@ -45,8 +47,12 @@ class SecretaryStudentsController extends Controller
                 'email' => $student->email,
                 'phone' => $student->phone,
                 'class_name' => $student->schoolClass?->name,
+                'class_names' => $student->classes->pluck('name')->values(),
+                'class_ids' => $student->classes->pluck('id')->values(),
                 'account_balance' => $student->account_balance,
                 'payment_status' => $student->payment_status,
+                'last_payment_amount' => $student->payments->first()?->amount,
+                'last_payment_date' => $student->payments->first()?->created_at?->toDateString(),
                 'status' => 'Actif', // Could be based on some logic
                 'created_at' => $student->created_at?->toDateString(),
             ]),
@@ -64,30 +70,46 @@ class SecretaryStudentsController extends Controller
             'password' => ['required', 'string', 'min:8'],
             'phone' => ['nullable', 'string', 'max:30'],
             'class_id' => ['nullable', 'integer', 'exists:classes,id'],
-            'account_balance' => ['required', 'numeric', 'min:0'],
+            'class_ids' => ['nullable', 'array'],
+            'class_ids.*' => ['integer', 'exists:classes,id'],
             'payment_status' => ['required', 'in:paid,pending,late'],
-            'amount_paid' => ['nullable', 'numeric', 'min:0'],
+            'account_balance' => ['nullable', 'numeric', 'min:0'],
+            'amount_paid' => ['required', 'numeric', 'min:0'],
         ]);
 
         $amountPaid = (float) ($validated['amount_paid'] ?? 0);
+        $accountBalance = (float) ($validated['account_balance'] ?? 0);
         $plainPassword = $validated['password'];
+        $classIds = $validated['class_ids'] ?? [];
         unset($validated['amount_paid']);
+        unset($validated['account_balance']);
+        unset($validated['class_ids']);
+
+        if (empty($validated['class_id']) && !empty($classIds)) {
+            $validated['class_id'] = $classIds[0];
+        }
 
         $student = User::create([
             ...$validated,
             'role' => 'student',
             'password' => Hash::make($plainPassword),
+            'account_balance' => $accountBalance,
         ]);
 
         // Create payment record if amount was paid
         if ($amountPaid > 0) {
+            $now = now();
             Payment::create([
                 'student_id' => $student->id,
                 'amount' => $amountPaid,
                 'status' => 'paid',
-                'payment_date' => now(),
-                'recorded_by' => $request->user()->id,
+                'month' => (int) $now->month,
+                'year' => (int) $now->year,
             ]);
+        }
+
+        if (!empty($classIds)) {
+            $student->classes()->sync($classIds);
         }
 
         return response()->json([
@@ -98,6 +120,8 @@ class SecretaryStudentsController extends Controller
                 'email' => $student->email,
                 'phone' => $student->phone,
                 'class_name' => $student->schoolClass?->name,
+                'class_names' => $student->classes()->pluck('name'),
+                'class_ids' => $student->classes()->pluck('id'),
                 'account_balance' => $student->account_balance,
                 'payment_status' => $student->payment_status,
             ],
@@ -116,24 +140,39 @@ class SecretaryStudentsController extends Controller
             'password' => ['nullable', 'string', 'min:8'],
             'phone' => ['nullable', 'string', 'max:30'],
             'class_id' => ['nullable', 'integer', 'exists:classes,id'],
-            'account_balance' => ['required', 'numeric', 'min:0'],
+            'class_ids' => ['nullable', 'array'],
+            'class_ids.*' => ['integer', 'exists:classes,id'],
             'payment_status' => ['required', 'in:paid,pending,late'],
+            'account_balance' => ['nullable', 'numeric', 'min:0'],
         ]);
+
+        $classIds = $validated['class_ids'] ?? null;
+        unset($validated['class_ids']);
 
         $updateData = [
             'name' => $validated['name'],
             'email' => $validated['email'],
             'phone' => $validated['phone'],
-            'class_id' => $validated['class_id'],
-            'account_balance' => $validated['account_balance'],
+            'class_id' => $validated['class_id'] ?? null,
             'payment_status' => $validated['payment_status'],
         ];
+        if (array_key_exists('account_balance', $validated)) {
+            $updateData['account_balance'] = $validated['account_balance'];
+        }
+
+        if (empty($updateData['class_id']) && is_array($classIds) && !empty($classIds)) {
+            $updateData['class_id'] = $classIds[0];
+        }
 
         if (!empty($validated['password'])) {
             $updateData['password'] = Hash::make($validated['password']);
         }
 
         $student->update($updateData);
+
+        if (is_array($classIds)) {
+            $student->classes()->sync($classIds);
+        }
 
         return response()->json([
             'message' => 'Étudiant mis à jour avec succès',
@@ -143,6 +182,8 @@ class SecretaryStudentsController extends Controller
                 'email' => $student->email,
                 'phone' => $student->phone,
                 'class_name' => $student->schoolClass?->name,
+                'class_names' => $student->classes()->pluck('name'),
+                'class_ids' => $student->classes()->pluck('id'),
                 'account_balance' => $student->account_balance,
                 'payment_status' => $student->payment_status,
             ],

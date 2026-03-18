@@ -4,12 +4,6 @@ import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
 import { apiGet } from "@/lib/api";
 
-const fallbackTasks = [
-  { title: "Valider 3 paiements", status: "En attente" },
-  { title: "Créer 2 dossiers étudiants", status: "Aujourd'hui" },
-  { title: "Envoyer 5 reçus", status: "Cette semaine" },
-];
-
 interface SecretaryDashboardResponse {
   stats: {
     students: number;
@@ -17,16 +11,30 @@ interface SecretaryDashboardResponse {
     receipts: number;
     requests: number;
   };
-  tasks: Array<{
-    title: string;
-    status: string;
-  }>;
+}
+
+interface Student {
+  id: number;
+  name: string;
+  email: string;
+  class_name: string | null;
+  class_names?: string[];
+  payment_status: string;
+}
+
+interface StudentsResponse {
+  data: Student[];
 }
 
 export default function SecretaryDashboard() {
   const { data } = useQuery({
     queryKey: ["secretary-dashboard"],
     queryFn: () => apiGet<SecretaryDashboardResponse>("/dashboard/secretary"),
+  });
+
+  const { data: studentsData } = useQuery({
+    queryKey: ["secretary-students-preview"],
+    queryFn: () => apiGet<StudentsResponse>("/secretary/students?limit=200"),
   });
 
   const stats = data?.stats
@@ -43,7 +51,15 @@ export default function SecretaryDashboard() {
         { label: "Demandes", value: "12", icon: ClipboardList, color: "bg-accent/10 text-accent" },
       ];
 
-  const tasks = data ? data.tasks : fallbackTasks;
+  const students = (studentsData?.data || []).slice(0, 8).map((student) => ({
+    id: student.id,
+    name: student.name,
+    email: student.email,
+    className: student.class_names?.length
+      ? student.class_names.join(", ")
+      : student.class_name || "—",
+    paymentStatus: student.payment_status === "paid" ? "Payé" : "Non payé",
+  }));
 
   return (
     <DashboardLayout role="secretary">
@@ -66,14 +82,49 @@ export default function SecretaryDashboard() {
         </div>
 
         <div className="bg-card rounded-2xl shadow-card p-6">
-          <h3 className="font-heading font-semibold mb-4">Tâches prioritaires</h3>
-          <div className="space-y-3">
-            {tasks.map((task) => (
-              <div key={task.title} className="flex items-center justify-between p-4 rounded-lg bg-secondary/50">
-                <div className="font-medium text-foreground">{task.title}</div>
-                <span className="text-xs text-muted-foreground">{task.status}</span>
-              </div>
-            ))}
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-heading font-semibold">Étudiants</h3>
+            <span className="text-xs text-muted-foreground">Aperçu</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border text-muted-foreground">
+                  <th className="text-left py-2">Nom</th>
+                  <th className="text-left py-2">Email</th>
+                  <th className="text-left py-2">Classe</th>
+                  <th className="text-left py-2">Statut paiement</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.length ? (
+                  students.map((student) => (
+                    <tr key={student.id} className="border-b border-border last:border-0">
+                      <td className="py-3 font-medium text-foreground">{student.name}</td>
+                      <td className="py-3 text-muted-foreground">{student.email}</td>
+                      <td className="py-3 text-muted-foreground">{student.className}</td>
+                      <td className="py-3">
+                        <span
+                          className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                            student.paymentStatus === "Payé"
+                              ? "bg-success/10 text-success"
+                              : "bg-warning/10 text-warning"
+                          }`}
+                        >
+                          {student.paymentStatus}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-6 text-center text-muted-foreground">
+                      Aucun étudiant trouvé.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>

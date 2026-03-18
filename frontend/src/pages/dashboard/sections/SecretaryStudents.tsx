@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 
 const studentFormSchema = z.object({
@@ -41,7 +42,7 @@ const studentFormSchema = z.object({
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
   phone: z.string().optional(),
   class_id: z.string().optional(),
-  account_balance: z.string().min(1, "Le solde du compte est requis"),
+  class_ids: z.array(z.string()).optional(),
   payment_status: z.enum(["paid", "pending", "late"], {
     required_error: "Le statut de paiement est requis",
   }),
@@ -51,8 +52,8 @@ const studentFormSchema = z.object({
 type StudentFormData = z.infer<typeof studentFormSchema>;
 
 const statusStyles: Record<string, string> = {
-  Actif: "bg-success/10 text-success",
-  "En attente": "bg-warning/10 text-warning",
+  Payé: "bg-success/10 text-success",
+  "Non payé": "bg-warning/10 text-warning",
 };
 
 const paymentStatusLabels: Record<string, string> = {
@@ -67,6 +68,8 @@ interface Student {
   email: string;
   phone: string | null;
   class_name: string | null;
+  class_names?: string[];
+  class_ids?: number[];
   account_balance: number;
   payment_status: string;
   status: string;
@@ -80,10 +83,17 @@ interface StudentsResponse {
   current_page: number;
 }
 
+interface ClassesResponse {
+  data: Array<{
+    id: number;
+    name: string;
+  }>;
+}
+
 const mockStudents = [
-  { id: 1, name: "Fatima Zahra", className: "DELF B2", status: "Actif", phone: "+212 6 11 11 11 11" },
-  { id: 2, name: "Youssef Alami", className: "TOEFL", status: "Actif", phone: "+212 6 22 22 22 22" },
-  { id: 3, name: "Ahmed Mansouri", className: "TEF", status: "En attente", phone: "+212 6 33 33 33 33" },
+  { id: 1, name: "Fatima Zahra", className: "DELF B2", status: "Payé", phone: "+212 6 11 11 11 11" },
+  { id: 2, name: "Youssef Alami", className: "TOEFL", status: "Payé", phone: "+212 6 22 22 22 22" },
+  { id: 3, name: "Ahmed Mansouri", className: "TEF", status: "Non payé", phone: "+212 6 33 33 33 33" },
 ];
 
 export default function SecretaryStudents() {
@@ -100,7 +110,7 @@ export default function SecretaryStudents() {
       password: "",
       phone: "",
       class_id: "",
-      account_balance: "0",
+      class_ids: [],
       payment_status: "pending",
       amount_paid: "",
     },
@@ -108,15 +118,20 @@ export default function SecretaryStudents() {
 
   const { data } = useQuery({
     queryKey: ["secretary-students", search],
-    queryFn: () => apiGet<StudentsResponse>(`/secretary/students?search=${encodeURIComponent(search)}`),
+    queryFn: () => apiGet<StudentsResponse>(`/secretary/students?search=${encodeURIComponent(search)}&limit=200`),
+  });
+
+  const { data: classesData } = useQuery({
+    queryKey: ["public-classes"],
+    queryFn: () => apiGet<ClassesResponse>("/classes"),
   });
 
   const createStudentMutation = useMutation({
     mutationFn: (data: StudentFormData) => apiPost("/secretary/students", {
       ...data,
       class_id: data.class_id ? parseInt(data.class_id) : null,
-      account_balance: parseFloat(data.account_balance),
-      amount_paid: data.amount_paid ? parseFloat(data.amount_paid) : 0,
+      class_ids: (data.class_ids || []).map((id) => parseInt(id)),
+      amount_paid: parseFloat(data.amount_paid),
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["secretary-students"] });
@@ -134,7 +149,7 @@ export default function SecretaryStudents() {
       apiPut(`/secretary/students/${id}`, {
         ...data,
         class_id: data.class_id ? parseInt(data.class_id) : null,
-        account_balance: parseFloat(data.account_balance!),
+        class_ids: (data.class_ids || []).map((id) => parseInt(id)),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["secretary-students"] });
@@ -162,9 +177,12 @@ export default function SecretaryStudents() {
     ? data.data.map((student) => ({
         id: student.id,
         name: student.name,
-        className: student.class_name || "—",
+        className: student.class_names?.length
+          ? student.class_names.join(", ")
+          : student.class_name || "—",
         phone: student.phone || "—",
-        status: "Actif", // Could be based on some logic
+        status: student.payment_status === "paid" ? "Payé" : "Non payé",
+        class_ids: student.class_ids || [],
       }))
     : mockStudents;
 
@@ -175,8 +193,8 @@ export default function SecretaryStudents() {
       email: student.email,
       password: "", // Don't prefill password
       phone: student.phone || "",
-      class_id: student.class_name ? "1" : "", // This would need proper class ID
-      account_balance: student.account_balance.toString(),
+      class_id: student.class_name ? String(student.class_ids?.[0] ?? "") : "",
+      class_ids: (student.class_ids || []).map((id) => String(id)),
       payment_status: student.payment_status as "paid" | "pending" | "late",
       amount_paid: "",
     });
@@ -194,11 +212,18 @@ export default function SecretaryStudents() {
       if (!updateData.password) {
         delete updateData.password; // Don't send empty password for updates
       }
+      delete updateData.amount_paid;
       updateStudentMutation.mutate({
         id: editingStudent.id,
         data: updateData,
       });
     } else {
+      if (!formData.amount_paid || formData.amount_paid.trim() === "") {
+        form.setError("amount_paid", {
+          message: "Le montant payé est requis",
+        });
+        return;
+      }
       createStudentMutation.mutate(formData);
     }
   };
@@ -275,6 +300,42 @@ export default function SecretaryStudents() {
                         )}
                       />
                     </div>
+                    <FormField
+                      control={form.control}
+                      name="class_ids"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Cours suivis</FormLabel>
+                          <div className="grid grid-cols-2 gap-3 rounded-lg border border-input bg-background p-3">
+                            {(classesData?.data || []).map((classItem) => {
+                              const isChecked = (field.value || []).includes(String(classItem.id));
+                              return (
+                                <label key={classItem.id} className="flex items-center gap-2 text-sm text-foreground">
+                                  <Checkbox
+                                    checked={isChecked}
+                                    onCheckedChange={(checked) => {
+                                      const current = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...current, String(classItem.id)]);
+                                      } else {
+                                        field.onChange(current.filter((id) => id !== String(classItem.id)));
+                                      }
+                                    }}
+                                  />
+                                  {classItem.name}
+                                </label>
+                              );
+                            })}
+                            {!classesData?.data?.length && (
+                              <div className="text-xs text-muted-foreground">
+                                Aucune classe disponible.
+                              </div>
+                            )}
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
@@ -312,19 +373,6 @@ export default function SecretaryStudents() {
                     <div className="grid grid-cols-2 gap-4">
                       <FormField
                         control={form.control}
-                        name="account_balance"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Solde du compte (DH)</FormLabel>
-                            <FormControl>
-                              <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
                         name="payment_status"
                         render={({ field }) => (
                           <FormItem>
@@ -351,7 +399,7 @@ export default function SecretaryStudents() {
                       name="amount_paid"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Montant payé (optionnel)</FormLabel>
+                          <FormLabel>Montant payé</FormLabel>
                           <FormControl>
                             <Input type="number" step="0.01" placeholder="0.00" {...field} />
                           </FormControl>
