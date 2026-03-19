@@ -56,7 +56,7 @@ class SecretaryClassesController extends Controller
         $class = SchoolClass::create($validated);
 
         return response()->json([
-            'message' => 'Classe créée avec succès',
+            'message' => 'Cours créé avec succès',
             'class' => [
                 'id' => $class->id,
                 'name' => $class->name,
@@ -70,3 +70,4 @@ class SecretaryClassesController extends Controller
         ], 201);
     }
 }
+

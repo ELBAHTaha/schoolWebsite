@@ -79,9 +79,9 @@
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2.2rem;flex-wrap:wrap;gap:1rem;">
         <div>
             <h1 style="font-size:2.2rem;font-weight:800;margin:0;color:#1e293b;letter-spacing:-1px;">Gestion des Utilisateurs</h1>
-            <div style="color:#64748b;font-size:1.1rem;margin-top:.2rem;">GÃ©rez et suivez tous les utilisateurs de l'Ã©tablissement</div>
+            <div style="color:#64748b;font-size:1.1rem;margin-top:.2rem;">Gérez et suivez tous les utilisateurs de l'établissement</div>
         </div>
-        <button id="showCreateFormBtn" class="create-btn" style="margin-left:auto;">+ CrÃ©er un utilisateur</button>
+        <button id="showCreateFormBtn" class="create-btn" style="margin-left:auto;">+ Créer un utilisateur</button>
     </div>
     <div style="display:grid;grid-template-columns:repeat(1,1fr);gap:1.2rem;margin-bottom:2.2rem;">
         <div style="padding:1.3rem 1.2rem;display:flex;align-items:center;gap:.8rem">
@@ -114,7 +114,7 @@
                     <th style="padding:1rem 1.2rem;border-top-left-radius:1rem;text-align:left;font-weight:700;">ID</th>
                     <th style="padding:1rem 1.2rem;text-align:left;font-weight:700;">Nom</th>
                     <th style="padding:1rem 1.2rem;text-align:left;font-weight:700;">Email</th>
-                    <th style="padding:1rem 1.2rem;text-align:left;font-weight:700;">RÃ´le</th>
+                    <th style="padding:1rem 1.2rem;text-align:left;font-weight:700;">Rôle</th>
                     <th style="padding:1rem 1.2rem;border-top-right-radius:1rem;text-align:left;font-weight:700;">Actions</th>
                 </tr>
             </thead>

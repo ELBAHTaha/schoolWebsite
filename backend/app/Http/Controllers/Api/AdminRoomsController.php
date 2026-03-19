@@ -86,3 +86,4 @@ class AdminRoomsController extends Controller
         ]);
     }
 }
+

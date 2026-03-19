@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -144,7 +144,7 @@ export default function CommercialDashboard() {
                   <tr key={lead.id} className="border-b border-border last:border-0">
                     <td className="px-6 py-3 font-medium text-foreground">{lead.name}</td>
                     <td className="px-6 py-3 text-muted-foreground">{lead.email}</td>
-                    <td className="px-6 py-3 text-muted-foreground">{lead.phone || "—"}</td>
+                    <td className="px-6 py-3 text-muted-foreground">{lead.phone || "”"}</td>
                     <td className="px-6 py-3 text-muted-foreground">{lead.desired_program}</td>
                     <td className="px-6 py-3 text-muted-foreground">
                       {lead.created_at?.slice(0, 10)}
@@ -177,3 +177,4 @@ export default function CommercialDashboard() {
     </DashboardLayout>
   );
 }
+

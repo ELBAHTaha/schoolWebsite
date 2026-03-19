@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -152,3 +152,4 @@ class SecretaryPaymentsController extends Controller
         $student->save();
     }
 }
+

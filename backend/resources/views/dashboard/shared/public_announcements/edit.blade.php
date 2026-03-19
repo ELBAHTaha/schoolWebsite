@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+﻿@extends('layouts.dashboard')
 @section('title', 'Edit Public Announcement')
 @section('dashboard-content')
 <div style="max-width:760px;margin:0 auto;padding:2.5rem 2rem 2rem 2rem;background:#f8fafc;min-height:100vh;">
@@ -28,4 +28,5 @@
     </form>
 </div>
 @endsection
+
 

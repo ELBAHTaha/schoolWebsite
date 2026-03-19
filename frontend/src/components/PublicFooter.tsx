@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { Phone, Mail, MapPin, Globe, Facebook, Instagram, Youtube } from "lucide-react";
 
 export default function PublicFooter() {
@@ -10,7 +10,7 @@ export default function PublicFooter() {
           <div>
             <img src="/logo.png" alt="JEFAL Privé" className="h-20 w-auto mb-2 mx-auto" />
             <p className="text-sm opacity-70 leading-relaxed mt-2">
-              Academy American International JEFAL Privé — Votre partenaire pour l'excellence linguistique à Settat, Maroc.
+              Academy American International JEFAL Privé ” Votre partenaire pour l'excellence linguistique à Settat, Maroc.
             </p>
             <div className="flex gap-3 mt-5">
               <a href="#" className="w-9 h-9 rounded-full bg-primary-foreground/10 hover:bg-accent flex items-center justify-center transition-colors">
@@ -84,3 +84,5 @@ export default function PublicFooter() {
     </footer>
   );
 }
+
+

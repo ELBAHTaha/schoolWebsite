@@ -1,5 +1,5 @@
 ﻿import { Plus, Search, Edit, Trash2 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -56,12 +56,6 @@ const statusStyles: Record<string, string> = {
   "Non payé": "bg-warning/10 text-warning",
 };
 
-const paymentStatusLabels: Record<string, string> = {
-  paid: "Payé",
-  pending: "En attente",
-  late: "En retard",
-};
-
 interface Student {
   id: number;
   name: string;
@@ -89,12 +83,6 @@ interface ClassesResponse {
     name: string;
   }>;
 }
-
-const mockStudents = [
-  { id: 1, name: "Fatima Zahra", className: "DELF B2", status: "Payé", phone: "+212 6 11 11 11 11" },
-  { id: 2, name: "Youssef Alami", className: "TOEFL", status: "Payé", phone: "+212 6 22 22 22 22" },
-  { id: 3, name: "Ahmed Mansouri", className: "TEF", status: "Non payé", phone: "+212 6 33 33 33 33" },
-];
 
 export default function SecretaryStudents() {
   const [search, setSearch] = useState("");
@@ -173,18 +161,16 @@ export default function SecretaryStudents() {
     },
   });
 
-  const students = data
-    ? data.data.map((student) => ({
-        id: student.id,
-        name: student.name,
-        className: student.class_names?.length
-          ? student.class_names.join(", ")
-          : student.class_name || "—",
-        phone: student.phone || "—",
-        status: student.payment_status === "paid" ? "Payé" : "Non payé",
-        class_ids: student.class_ids || [],
-      }))
-    : mockStudents;
+  const students = (data?.data || []).map((student) => ({
+    id: student.id,
+    name: student.name,
+    className: student.class_names?.length
+      ? student.class_names.join(", ")
+      : student.class_name || "—",
+    phone: student.phone || "—",
+    status: student.payment_status === "paid" ? "Payé" : "Non payé",
+    class_ids: student.class_ids || [],
+  }));
 
   const handleEditStudent = (student: Student) => {
     setEditingStudent(student);
@@ -274,7 +260,7 @@ export default function SecretaryStudents() {
                   <Plus className="w-4 h-4" /> Ajouter
                 </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
+              <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>
                     {editingStudent ? "Modifier l'étudiant" : "Ajouter un étudiant"}
@@ -286,146 +272,148 @@ export default function SecretaryStudents() {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nom complet</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Entrez le nom complet" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="email"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Email</FormLabel>
-                            <FormControl>
-                              <Input type="email" placeholder="Entrez l'email" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="class_ids"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Cours suivis</FormLabel>
-                          <div className="grid grid-cols-2 gap-3 rounded-lg border border-input bg-background p-3">
-                            {(classesData?.data || []).map((classItem) => {
-                              const isChecked = (field.value || []).includes(String(classItem.id));
-                              return (
-                                <label key={classItem.id} className="flex items-center gap-2 text-sm text-foreground">
-                                  <Checkbox
-                                    checked={isChecked}
-                                    onCheckedChange={(checked) => {
-                                      const current = field.value || [];
-                                      if (checked) {
-                                        field.onChange([...current, String(classItem.id)]);
-                                      } else {
-                                        field.onChange(current.filter((id) => id !== String(classItem.id)));
-                                      }
-                                    }}
-                                  />
-                                  {classItem.name}
-                                </label>
-                              );
-                            })}
-                            {!classesData?.data?.length && (
-                              <div className="text-xs text-muted-foreground">
-                                Aucune classe disponible.
-                              </div>
-                            )}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="password"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>
-                              Mot de passe {editingStudent && "(laisser vide pour ne pas changer)"}
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="password"
-                                placeholder="Entrez le mot de passe"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="phone"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Téléphone</FormLabel>
-                            <FormControl>
-                              <Input placeholder="Entrez le numéro de téléphone" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    {!editingStudent && (
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[75vh] flex-col">
+                    <div className="flex-1 space-y-4 overflow-y-auto pr-1">
                       <div className="grid grid-cols-2 gap-4">
                         <FormField
                           control={form.control}
-                          name="payment_status"
+                          name="name"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Statut de paiement</FormLabel>
-                              <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                <FormControl>
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="Sélectionnez un statut" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="paid">Payé</SelectItem>
-                                  <SelectItem value="pending">En attente</SelectItem>
-                                  <SelectItem value="late">En retard</SelectItem>
-                                </SelectContent>
-                              </Select>
+                              <FormLabel>Nom complet</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Entrez le nom complet" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="email"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Email</FormLabel>
+                              <FormControl>
+                                <Input type="email" placeholder="Entrez l'email" {...field} />
+                              </FormControl>
                               <FormMessage />
                             </FormItem>
                           )}
                         />
                       </div>
-                    )}
-                    {!editingStudent && (
                       <FormField
                         control={form.control}
-                        name="amount_paid"
+                        name="class_ids"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Montant payé</FormLabel>
-                            <FormControl>
-                              <Input type="number" step="0.01" placeholder="0.00" {...field} />
-                            </FormControl>
+                            <FormLabel>Cours suivis</FormLabel>
+                            <div className="grid grid-cols-2 gap-3 rounded-lg border border-input bg-background p-3">
+                              {(classesData?.data || []).map((classItem) => {
+                                const isChecked = (field.value || []).includes(String(classItem.id));
+                                return (
+                                  <label key={classItem.id} className="flex items-center gap-2 text-sm text-foreground">
+                                    <Checkbox
+                                      checked={isChecked}
+                                      onCheckedChange={(checked) => {
+                                        const current = field.value || [];
+                                        if (checked) {
+                                          field.onChange([...current, String(classItem.id)]);
+                                        } else {
+                                          field.onChange(current.filter((id) => id !== String(classItem.id)));
+                                        }
+                                      }}
+                                    />
+                                    {classItem.name}
+                                  </label>
+                                );
+                              })}
+                              {!classesData?.data?.length && (
+                                <div className="text-xs text-muted-foreground">
+                                  Aucun cours disponible.
+                                </div>
+                              )}
+                            </div>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                    )}
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="password"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>
+                                Mot de passe {editingStudent && "(laisser vide pour ne pas changer)"}
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="password"
+                                  placeholder="Entrez le mot de passe"
+                                  {...field}
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="phone"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Téléphone</FormLabel>
+                              <FormControl>
+                                <Input placeholder="Entrez le numéro de téléphone" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      {!editingStudent && (
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name="payment_status"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Statut de paiement</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Sélectionnez un statut" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="paid">Payé</SelectItem>
+                                    <SelectItem value="pending">En attente</SelectItem>
+                                    <SelectItem value="late">En retard</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      )}
+                      {!editingStudent && (
+                        <FormField
+                          control={form.control}
+                          name="amount_paid"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Montant payé</FormLabel>
+                              <FormControl>
+                                <Input type="number" step="0.01" placeholder="0.00" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      )}
+                    </div>
                     <div className="flex justify-end gap-3 pt-4">
                       <Button
                         type="button"
@@ -467,7 +455,7 @@ export default function SecretaryStudents() {
           <SimpleTable
             columns={[
               { key: "name", label: "Étudiant", className: "font-medium text-foreground" },
-              { key: "className", label: "Classe", className: "text-muted-foreground" },
+              { key: "className", label: "Cours", className: "text-muted-foreground" },
               { key: "phone", label: "Téléphone", className: "text-muted-foreground" },
               {
                 key: "status",

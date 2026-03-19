@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Student;
 
@@ -16,7 +16,7 @@ class ScheduleController extends Controller
             ? collect([$request->user()->class_id])
             : $request->user()->enrolledClasses()->pluck('classes.id');
 
-        // Semaine courante ou demandÃ©e
+        // Semaine courante ou demandée
         $week = (int)($request->query('week', date('W')));
         $year = (int)($request->query('year', date('Y')));
         // Premier jour de la semaine (lundi)
@@ -67,4 +67,5 @@ class ScheduleController extends Controller
         ]);
     }
 }
+
 

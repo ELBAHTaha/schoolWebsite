@@ -1,19 +1,8 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { Send, CheckCircle2 } from "lucide-react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiGet, apiPost, ApiError } from "@/lib/api";
-
-const fallbackCourses = [
-  "Français — DELF / DALF",
-  "Anglais — TOEFL",
-  "Anglais — IELTS",
-  "Français — TEF / TCF",
-  "Italien",
-  "Allemand",
-  "Espagnol",
-  "Préparation immigration",
-];
 
 interface PreRegistrationFormProps {
   onBack?: () => void;
@@ -28,6 +17,7 @@ export default function PreRegistrationForm({ onBack, initialProgram }: PreRegis
     email: "",
     phone: "",
     desired_program: initialProgram || "",
+    payment_method: "onsite",
     message: "",
   });
 
@@ -36,7 +26,7 @@ export default function PreRegistrationForm({ onBack, initialProgram }: PreRegis
     queryFn: () => apiGet<{ data: Array<{ id: number; name: string }> }>("/classes"),
   });
 
-  const courses = data?.data?.length ? data.data.map((c) => c.name) : fallbackCourses;
+  const courses = data?.data?.length ? data.data.map((c) => c.name) : [];
   const courseOptions =
     initialProgram && !courses.includes(initialProgram) ? [initialProgram, ...courses] : courses;
 
@@ -47,8 +37,15 @@ export default function PreRegistrationForm({ onBack, initialProgram }: PreRegis
   }, [initialProgram, form.desired_program]);
 
   const mutation = useMutation({
-    mutationFn: () => apiPost("/pre-registration", form),
-    onSuccess: () => {
+    mutationFn: () =>
+      apiPost<{
+        redirect_url?: string | null;
+      }>("/pre-registration", form),
+    onSuccess: (response) => {
+      if (response?.redirect_url) {
+        window.location.href = response.redirect_url;
+        return;
+      }
       setSubmitted(true);
       setError(null);
     },
@@ -126,12 +123,48 @@ export default function PreRegistrationForm({ onBack, initialProgram }: PreRegis
               className="w-full px-4 py-3 rounded-xl border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
             >
               <option value="">Choisir un programme...</option>
-              {courseOptions.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
+              {courseOptions.length ? (
+                courseOptions.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))
+              ) : (
+                <option value="" disabled>Aucun programme disponible</option>
+              )}
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2 text-foreground">Méthode de paiement *</label>
+            <div className="grid sm:grid-cols-2 gap-3">
+              <label className="flex items-center gap-3 rounded-xl border border-border p-4 cursor-pointer hover:border-primary/60 transition-colors">
+                <input
+                  type="radio"
+                  name="payment_method"
+                  value="onsite"
+                  checked={form.payment_method === "onsite"}
+                  onChange={(e) => setForm((prev) => ({ ...prev, payment_method: e.target.value }))}
+                />
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Paiement sur place</div>
+                  <div className="text-xs text-muted-foreground">Régler à l'académie lors de votre visite.</div>
+                </div>
+              </label>
+              <label className="flex items-center gap-3 rounded-xl border border-border p-4 cursor-pointer hover:border-primary/60 transition-colors">
+                <input
+                  type="radio"
+                  name="payment_method"
+                  value="online"
+                  checked={form.payment_method === "online"}
+                  onChange={(e) => setForm((prev) => ({ ...prev, payment_method: e.target.value }))}
+                />
+                <div>
+                  <div className="text-sm font-semibold text-foreground">Paiement en ligne (CMI)</div>
+                  <div className="text-xs text-muted-foreground">Vous serez redirigé vers le paiement.</div>
+                </div>
+              </label>
+            </div>
           </div>
 
           <div>

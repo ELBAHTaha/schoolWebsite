@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+﻿@extends('layouts.dashboard')
 @section('title', 'Professor - Assignment Details')
 @section('dashboard-content')
 <h1>{{ $assignment->title }}</h1>
@@ -17,3 +17,4 @@
     </div>
 </div>
 @endsection
+

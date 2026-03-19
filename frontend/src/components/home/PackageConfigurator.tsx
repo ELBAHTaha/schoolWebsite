@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import { motion } from "framer-motion";
 import { Calendar, Monitor, Clock, Crown, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -317,4 +317,6 @@ export default function PackageConfigurator({ initialProgram }: PackageConfigura
     </section>
   );
 }
+
+
 

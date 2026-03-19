@@ -2,17 +2,24 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Search } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
-import { apiGet } from "@/lib/api";
-
-const fallbackPayments = [
-  { id: 1, student: "Fatima Zahra", course: "DELF B2", amount: 2000, date: "2026-03-01", status: "Payé" },
-  { id: 2, student: "Youssef Alami", course: "TOEFL", amount: 2500, date: "2026-02-28", status: "En attente" },
-  { id: 3, student: "Sara Benali", course: "IELTS", amount: 2500, date: "2026-02-25", status: "Payé" },
-  { id: 4, student: "Ahmed Mansouri", course: "TEF", amount: 1800, date: "2026-02-20", status: "Impayé" },
-  { id: 5, student: "Khadija El Idrissi", course: "Italien", amount: 1200, date: "2026-02-18", status: "En retard" },
-  { id: 6, student: "Omar Tahiri", course: "Allemand", amount: 1200, date: "2026-02-15", status: "Payé" },
-];
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { apiGet, apiPost, apiPut } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 
 const statusStyles: Record<string, string> = {
   "Payé": "bg-success/10 text-success",
@@ -37,7 +44,13 @@ interface PaymentsResponse {
   };
   data: Array<{
     id: number;
+    student_id: number;
     student: string | null;
+    email?: string | null;
+    phone?: string | null;
+    role?: string | null;
+    class_ids?: number[];
+    payment_status?: string | null;
     course: string | null;
     amount: number;
     date: string | null;
@@ -47,6 +60,15 @@ interface PaymentsResponse {
 
 export default function PaymentsOverview() {
   const [search, setSearch] = useState("");
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentTarget, setPaymentTarget] = useState<any>(null);
+  const [paymentStatusTarget, setPaymentStatusTarget] = useState<"paid" | "pending">("paid");
+  const [paymentForm, setPaymentForm] = useState({
+    amount: "",
+    date: new Date().toISOString().slice(0, 10),
+    months: "1",
+  });
+  const queryClient = useQueryClient();
   const { data } = useQuery({
     queryKey: ["admin-payments", search],
     queryFn: () => apiGet<PaymentsResponse>(`/admin/payments?search=${encodeURIComponent(search)}`),
@@ -55,31 +77,72 @@ export default function PaymentsOverview() {
   const formatNumber = (value: number) => new Intl.NumberFormat("fr-FR").format(value);
   const formatCurrency = (value: number) => `${formatNumber(value)} DH`;
 
-  const summary = data?.summary
-    ? [
-        { label: "Total collecté", value: formatCurrency(data.summary.total_collected), sub: "Ce mois" },
-        { label: "En attente", value: formatCurrency(data.summary.pending), sub: `${data.summary.pending_count} paiements` },
-        { label: "Impayés", value: formatCurrency(data.summary.late), sub: `${data.summary.late_count} étudiants` },
-      ]
-    : [
-        { label: "Total collecté", value: "145,000 DH", sub: "Ce mois" },
-        { label: "En attente", value: "12,500 DH", sub: "5 paiements" },
-        { label: "Impayés", value: "8,200 DH", sub: "3 étudiants" },
-      ];
+  const summary = [
+    { label: "Total collecté", value: formatCurrency(data?.summary.total_collected ?? 0), sub: "Ce mois" },
+    { label: "En attente", value: formatCurrency(data?.summary.pending ?? 0), sub: `${data?.summary.pending_count ?? 0} paiements` },
+    { label: "Impayés", value: formatCurrency(data?.summary.late ?? 0), sub: `${data?.summary.late_count ?? 0} étudiants` },
+  ];
 
-  const payments = data
-    ? data.data.map((payment) => ({
-        id: payment.id,
-        student: payment.student ?? "—",
-        course: payment.course ?? "—",
-        amount: formatCurrency(payment.amount),
-        date: payment.date ?? "",
-        status: statusLabels[payment.status] ?? "En attente",
-      }))
-    : fallbackPayments.map((payment) => ({
-        ...payment,
-        amount: formatCurrency(payment.amount),
-      }));
+  const apiPayments = Array.isArray(data?.data) ? data.data : [];
+
+  const payments = apiPayments.map((payment) => ({
+    id: payment.id,
+    studentId: payment.student_id,
+    student: payment.student ?? "—",
+    email: payment.email ?? "",
+    phone: payment.phone ?? "",
+    role: payment.role ?? "student",
+    class_ids: payment.class_ids ?? [],
+    payment_status: payment.payment_status ?? "pending",
+    course: payment.course ?? "—",
+    amount: formatCurrency(payment.amount),
+    amountValue: payment.amount,
+    date: payment.date ?? "",
+    status: statusLabels[payment.status] ?? "En attente",
+  }));
+
+  const openPaymentModal = (payment: any) => {
+    setPaymentTarget(payment);
+    setPaymentStatusTarget(payment.status === "Payé" ? "paid" : "pending");
+    setPaymentForm({
+      amount: String(payment.amountValue ?? ""),
+      date: new Date().toISOString().slice(0, 10),
+      months: "1",
+    });
+    setPaymentModalOpen(true);
+  };
+
+  const handleConfirmPaymentStatus = async () => {
+    if (!paymentTarget) {
+      return;
+    }
+
+    if (paymentStatusTarget === "paid") {
+      if (!paymentForm.amount || !paymentForm.date || !paymentForm.months) {
+        return;
+      }
+      await apiPost("/admin/payments", {
+        student_id: paymentTarget.studentId,
+        amount: parseFloat(paymentForm.amount),
+        status: "paid",
+        payment_date: paymentForm.date,
+        months: parseInt(paymentForm.months, 10),
+      });
+    } else {
+      await apiPut(`/admin/users/${paymentTarget.studentId}`, {
+        name: paymentTarget.student,
+        email: paymentTarget.email,
+        role: paymentTarget.role,
+        phone: paymentTarget.phone || "",
+        class_ids: paymentTarget.class_ids || [],
+        payment_status: "pending",
+      });
+    }
+
+    setPaymentModalOpen(false);
+    setPaymentTarget(null);
+    queryClient.invalidateQueries({ queryKey: ["admin-payments"] });
+  };
 
   return (
     <DashboardLayout role="admin">
@@ -132,17 +195,95 @@ export default function PaymentsOverview() {
                     <td className="px-6 py-3 font-semibold text-foreground">{p.amount}</td>
                     <td className="px-6 py-3 text-muted-foreground">{p.date}</td>
                     <td className="px-6 py-3">
-                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusStyles[p.status]}`}>
+                      <button
+                        type="button"
+                        onClick={() => openPaymentModal(p)}
+                        className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statusStyles[p.status]}`}
+                      >
                         {p.status}
-                      </span>
+                      </button>
                     </td>
                   </tr>
                 ))}
+                {!payments.length && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-6 text-sm text-muted-foreground">
+                      Aucun paiement trouvé.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
         </div>
       </div>
+
+      <Dialog open={paymentModalOpen} onOpenChange={setPaymentModalOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Mettre à jour le paiement</DialogTitle>
+            <DialogDescription>
+              Choisissez le statut et complétez les informations du paiement.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1.5 text-foreground">Statut</label>
+              <Select
+                value={paymentStatusTarget}
+                onValueChange={(value) => setPaymentStatusTarget(value as "paid" | "pending")}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="paid">Payé</SelectItem>
+                  <SelectItem value="pending">Non payé</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {paymentStatusTarget === "paid" && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-foreground">Montant</label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    placeholder="0.00"
+                    value={paymentForm.amount}
+                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, amount: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-foreground">Date</label>
+                  <Input
+                    type="date"
+                    value={paymentForm.date}
+                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, date: e.target.value }))}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-1.5 text-foreground">Nombre de mois</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={paymentForm.months}
+                    onChange={(e) => setPaymentForm((prev) => ({ ...prev, months: e.target.value }))}
+                  />
+                </div>
+              </>
+            )}
+            <div className="flex justify-end gap-3 pt-2">
+              <Button type="button" variant="outline" onClick={() => setPaymentModalOpen(false)}>
+                Annuler
+              </Button>
+              <Button type="button" onClick={handleConfirmPaymentStatus}>
+                Enregistrer
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Api;
 
@@ -39,3 +39,4 @@ class AdminAnnouncementsController extends Controller
         ], 201);
     }
 }
+

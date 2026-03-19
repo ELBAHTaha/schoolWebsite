@@ -1,4 +1,4 @@
-import { useState } from "react";
+﻿import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
 import { Megaphone, Plus, Clock } from "lucide-react";
@@ -27,12 +27,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-
-const fallbackAnnouncements = [
-  { title: "Rentrée des classes — Mars 2026", content: "Les cours reprendront le 10 mars 2026. Veuillez vérifier vos emplois du temps.", date: "2026-03-02", author: "Admin", priority: "Important" },
-  { title: "Nouveau cours d'Espagnol", content: "Un nouveau cours d'espagnol débutant ouvrira en avril. Inscriptions ouvertes.", date: "2026-02-28", author: "Admin", priority: "Info" },
-  { title: "Résultats DELF — Session Février", content: "Les résultats de la session DELF de février sont disponibles au secrétariat.", date: "2026-02-25", author: "Secrétariat", priority: "Info" },
-];
 
 const priorityStyles: Record<string, string> = {
   Important: "bg-accent/10 text-accent",
@@ -81,15 +75,13 @@ export default function Announcements({ role = "admin" }: AnnouncementsProps) {
     queryFn: () => apiGet<AnnouncementResponse>("/public-announcements"),
   });
 
-  const announcements = data?.data?.length
-    ? data.data.map((item) => ({
-        title: item.title,
-        content: item.content,
-        date: item.start_date || "",
-        author: "Administration",
-        priority: "Info",
-      }))
-    : fallbackAnnouncements;
+  const announcements = (data?.data || []).map((item) => ({
+    title: item.title,
+    content: item.content,
+    date: item.start_date || "",
+    author: "Administration",
+    priority: "Info",
+  }));
 
   const createAnnouncementMutation = useMutation({
     mutationFn: (payload: AnnouncementFormData) =>
@@ -229,6 +221,9 @@ export default function Announcements({ role = "admin" }: AnnouncementsProps) {
               <p className="text-sm text-muted-foreground ml-[52px]">{a.content}</p>
             </div>
           ))}
+          {!announcements.length && (
+            <div className="text-sm text-muted-foreground">Aucune annonce disponible.</div>
+          )}
         </div>
       </div>
     </DashboardLayout>

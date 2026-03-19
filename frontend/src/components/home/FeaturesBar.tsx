@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+﻿import { motion } from "framer-motion";
 import { Monitor, Shield, Clock } from "lucide-react";
 
 const features = [
@@ -47,3 +47,4 @@ export default function FeaturesBar() {
     </section>
   );
 }
+

@@ -14,6 +14,7 @@ use App\Http\Controllers\Professor\MaterialController as ProfessorMaterialContro
 use App\Http\Controllers\Professor\ProfileController as ProfessorProfileController;
 use App\Http\Controllers\Professor\ScheduleController as ProfessorScheduleController;
 use App\Http\Controllers\PdfController;
+use App\Http\Controllers\Payments\PreRegistrationPaymentController;
 use App\Http\Controllers\Secretary\DashboardController as SecretaryDashboardController;
 use App\Http\Controllers\Secretary\PublicAnnouncementController as SecretaryPublicAnnouncementController;
 use App\Http\Controllers\Secretary\ProfessorManagementController as SecretaryProfessorManagementController;
@@ -36,6 +37,8 @@ Route::get('/create-account', [VisitorController::class, 'createAccountForm'])->
 Route::post('/create-account', [VisitorController::class, 'createAccount'])->name('visitor.create-account.store');
 Route::get('/pre-registration', [VisitorController::class, 'preRegistrationForm'])->name('visitor.pre-registration');
 Route::post('/pre-registration', [VisitorController::class, 'preRegistration'])->name('visitor.pre-registration.store');
+Route::get('/payments/pre-registration/{lead}', [PreRegistrationPaymentController::class, 'redirect'])
+    ->name('payments.pre-registration.redirect');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');

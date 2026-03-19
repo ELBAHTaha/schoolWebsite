@@ -88,7 +88,7 @@ export default function SecretaryDashboard() {
                 <tr className="border-b border-border text-muted-foreground">
                   <th className="text-left py-2">Nom</th>
                   <th className="text-left py-2">Email</th>
-                  <th className="text-left py-2">Classe</th>
+                  <th className="text-left py-2">Cours</th>
                   <th className="text-left py-2">Statut paiement</th>
                 </tr>
               </thead>

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Admin;
 
@@ -30,3 +30,4 @@ class FinancialReportController extends Controller
         return view('dashboard.admin.financial-reports.index', compact('monthlyReports', 'years', 'months'));
     }
 }
+

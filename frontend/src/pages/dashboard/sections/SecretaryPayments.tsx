@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+﻿import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -91,9 +91,9 @@ export default function SecretaryPayments() {
       status: normalizedStatus,
       classLabel: student.class_names?.length
         ? student.class_names.join(", ")
-        : student.class_name || "—",
+        : student.class_name || "”",
       amountPaid: student.last_payment_amount ?? 0,
-      lastPaymentDate: student.last_payment_date ?? "—",
+      lastPaymentDate: student.last_payment_date ?? "”",
     };
   });
 
@@ -148,7 +148,7 @@ export default function SecretaryPayments() {
             columns={[
               { key: "name", label: "Étudiant", className: "font-medium text-foreground" },
               { key: "email", label: "Email", className: "text-muted-foreground" },
-              { key: "classLabel", label: "Classe", className: "text-muted-foreground" },
+              { key: "classLabel", label: "Cours", className: "text-muted-foreground" },
               {
                 key: "amountPaid",
                 label: "Montant payé",
@@ -248,3 +248,5 @@ export default function SecretaryPayments() {
     </DashboardLayout>
   );
 }
+
+

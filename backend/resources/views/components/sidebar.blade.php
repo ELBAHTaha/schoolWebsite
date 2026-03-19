@@ -1,4 +1,4 @@
-@php
+﻿@php
     $role = auth()->user()?->role;
     $items = [
         'admin' => [
@@ -87,3 +87,4 @@
         <button type="submit" style="width:100%;background:linear-gradient(90deg,#2563eb 60%,#0ea5e9 100%);border:0;color:#fff;padding:.7rem 0;border-radius:0;cursor:pointer;font-weight:600;font-size:1.01rem;box-shadow:none;transition:background .18s;">Déconnexion</button>
     </form>
 </aside>
+

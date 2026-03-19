@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Admin;
 
@@ -87,3 +87,4 @@ class PublicAnnouncementController extends Controller
         abort_unless($announcement->created_by === $userId && $announcement->is_public, 404);
     }
 }
+

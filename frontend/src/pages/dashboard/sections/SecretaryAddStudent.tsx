@@ -31,7 +31,7 @@ const studentFormSchema = z.object({
   email: z.string().email("Email invalide"),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
   phone: z.string().optional(),
-  class_id: z.string().min(1, "La classe est requise"),
+  class_id: z.string().min(1, "Le cours est requis"),
   payment_status: z.enum(["paid", "pending", "late"], {
     required_error: "Le statut de paiement est requis",
   }),
@@ -148,11 +148,11 @@ export default function SecretaryAddStudent() {
                 name="class_id"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Classe</FormLabel>
+                    <FormLabel>Cours</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Sélectionnez une classe" />
+                          <SelectValue placeholder="Sélectionnez un cours" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>

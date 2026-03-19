@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
 
@@ -40,3 +40,4 @@ export default function PlaceholderPage({ role, title, subtitle }: PlaceholderPa
     </DashboardLayout>
   );
 }
+

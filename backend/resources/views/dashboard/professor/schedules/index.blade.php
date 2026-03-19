@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+﻿@extends('layouts.dashboard')
 @section('title', 'Professor - Schedule')
 @section('dashboard-content')
 <div style="max-width:900px;margin:0 auto;padding:2.5rem 2rem 2rem 2rem;background:#f8fafc;min-height:100vh;">
@@ -7,15 +7,15 @@
         <div style="color:#64748b;font-size:1.1rem;margin-top:.2rem;">Vue détaillée de vos créneaux</div>
     </div>
     <div style="padding:1.5rem 1.2rem;margin-bottom:1.6rem">
-        <h3 style="margin:0 0 1rem 0;font-size:1.1rem;color:#2563eb;font-weight:700;">Disponibilit�s (horaires de travail)</h3>
+        <h3 style="margin:0 0 1rem 0;font-size:1.1rem;color:#2563eb;font-weight:700;">Disponibilités (horaires de travail)</h3>
         @if($workingHours->isEmpty())
-            <div style="color:#64748b;">Aucun cr�neau d�fini.</div>
+            <div style="color:#64748b;">Aucun créneau défini.</div>
         @else
             <table style="width:100%;border-collapse:separate;border-spacing:0 .6rem;font-size:1.02rem;">
                 <thead>
                     <tr style="color:#64748b;text-transform:uppercase;font-size:.78rem;letter-spacing:.04em;">
                         <th style="text-align:left;padding:.4rem .6rem;">Jour</th>
-                        <th style="text-align:left;padding:.4rem .6rem;">D�but</th>
+                        <th style="text-align:left;padding:.4rem .6rem;">Début</th>
                         <th style="text-align:left;padding:.4rem .6rem;">Fin</th>
                     </tr>
                 </thead>
@@ -63,5 +63,6 @@
     </div>
 </div>
 @endsection
+
 
 

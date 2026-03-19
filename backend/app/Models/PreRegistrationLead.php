@@ -16,6 +16,8 @@ class PreRegistrationLead extends Model
         'phone',
         'desired_program',
         'message',
+        'payment_method',
+        'payment_status',
         'status',
         'assigned_commercial_id',
     ];

@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+﻿import { ReactNode } from "react";
 
 interface Column<T> {
   key: string;
@@ -55,3 +55,4 @@ export default function SimpleTable<T extends Record<string, unknown>>({
     </div>
   );
 }
+

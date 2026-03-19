@@ -11,9 +11,16 @@ use App\Http\Controllers\Api\AdminRoomsController;
 use App\Http\Controllers\Api\AdminUsersController;
 use App\Http\Controllers\Api\CommercialLeadsController;
 use App\Http\Controllers\Api\ProfessorAssignmentsController;
+use App\Http\Controllers\Api\ProfessorMaterialsController;
+use App\Http\Controllers\Api\ProfessorScheduleController;
 use App\Http\Controllers\Api\SecretaryClassesController;
 use App\Http\Controllers\Api\SecretaryPaymentsController;
+use App\Http\Controllers\Api\SecretaryProfessorsController;
+use App\Http\Controllers\Api\SecretaryRoomsController;
 use App\Http\Controllers\Api\SecretaryStudentsController;
+use App\Http\Controllers\Api\StudentAssignmentsController;
+use App\Http\Controllers\Api\StudentMaterialsController;
+use App\Http\Controllers\Api\StudentScheduleController;
 use App\Http\Controllers\Auth\AuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -80,6 +87,21 @@ Route::middleware(['web', 'auth', 'role:student'])
     ->get('/dashboard/student', [DashboardController::class, 'student'])
     ->name('api.dashboard.student');
 
+Route::middleware(['web', 'auth', 'role:student'])
+    ->prefix('student')
+    ->group(function () {
+        Route::get('/materials', [StudentMaterialsController::class, 'index'])
+            ->name('api.student.materials.index');
+        Route::get('/materials/{material}/download', [StudentMaterialsController::class, 'download'])
+            ->name('api.student.materials.download');
+        Route::get('/assignments', [StudentAssignmentsController::class, 'index'])
+            ->name('api.student.assignments.index');
+        Route::get('/assignments/{assignment}/download', [StudentAssignmentsController::class, 'download'])
+            ->name('api.student.assignments.download');
+        Route::get('/timetable', [StudentScheduleController::class, 'index'])
+            ->name('api.student.timetable.index');
+    });
+
 Route::middleware(['web', 'auth', 'role:professor'])
     ->get('/dashboard/professor', [DashboardController::class, 'professor'])
     ->name('api.dashboard.professor');
@@ -89,6 +111,8 @@ Route::middleware(['web', 'auth', 'role:professor'])
     ->group(function () {
         Route::get('/classes', [ProfessorAssignmentsController::class, 'classes'])
             ->name('api.professor.classes.index');
+        Route::get('/timetable', [ProfessorScheduleController::class, 'index'])
+            ->name('api.professor.timetable.index');
         Route::get('/assignments', [ProfessorAssignmentsController::class, 'index'])
             ->name('api.professor.assignments.index');
         Route::post('/assignments', [ProfessorAssignmentsController::class, 'store'])
@@ -97,6 +121,12 @@ Route::middleware(['web', 'auth', 'role:professor'])
             ->name('api.professor.assignments.update');
         Route::delete('/assignments/{assignment}', [ProfessorAssignmentsController::class, 'destroy'])
             ->name('api.professor.assignments.destroy');
+        Route::get('/materials', [ProfessorMaterialsController::class, 'index'])
+            ->name('api.professor.materials.index');
+        Route::post('/materials', [ProfessorMaterialsController::class, 'store'])
+            ->name('api.professor.materials.store');
+        Route::delete('/materials/{material}', [ProfessorMaterialsController::class, 'destroy'])
+            ->name('api.professor.materials.destroy');
     });
 
 Route::middleware(['web', 'auth', 'role:secretary'])
@@ -118,6 +148,10 @@ Route::middleware(['web', 'auth', 'role:secretary'])
             ->name('api.secretary.classes.index');
         Route::post('/classes', [SecretaryClassesController::class, 'store'])
             ->name('api.secretary.classes.store');
+        Route::get('/rooms', [SecretaryRoomsController::class, 'index'])
+            ->name('api.secretary.rooms.index');
+        Route::get('/professors', [SecretaryProfessorsController::class, 'index'])
+            ->name('api.secretary.professors.index');
         Route::get('/payments', [SecretaryPaymentsController::class, 'index'])
             ->name('api.secretary.payments.index');
         Route::post('/payments', [SecretaryPaymentsController::class, 'store'])

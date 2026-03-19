@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, XCircle } from "lucide-react";
 
@@ -11,3 +11,4 @@ const painPoints = [
 export default function PainPoints() {
   return null;
 }
+

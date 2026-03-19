@@ -7,16 +7,8 @@ import { useQuery } from "@tanstack/react-query";
 import { apiGet } from "@/lib/api";
 
 const baseStatsCards = [
-  { key: "students", label: "Total étudiants", value: "1,247", change: "+12%", up: true, icon: Users, color: "bg-primary/10 text-primary" },
-  { key: "monthly_revenue", label: "Revenus du mois", value: "145,000 DH", change: "+8%", up: true, icon: CreditCard, color: "bg-gold/10 text-gold" },
-];
-
-const fallbackRecentStudents = [
-  { name: "Fatima Zahra", course: "DELF B2", date: "2026-03-03", status: "Payé" },
-  { name: "Youssef Alami", course: "TOEFL", date: "2026-03-02", status: "En attente" },
-  { name: "Sara Benali", course: "IELTS", date: "2026-03-01", status: "Payé" },
-  { name: "Ahmed Mansouri", course: "TEF", date: "2026-02-28", status: "Impayé" },
-  { name: "Khadija El Idrissi", course: "Italien", date: "2026-02-27", status: "Payé" },
+  { key: "students", label: "Total étudiants", value: "0", change: "", up: true, icon: Users, color: "bg-primary/10 text-primary" },
+  { key: "monthly_revenue", label: "Revenus du mois", value: "0", change: "", up: true, icon: CreditCard, color: "bg-gold/10 text-gold" },
 ];
 
 const statusStyles: Record<string, string> = {
@@ -70,14 +62,12 @@ export default function AdminDashboard() {
     }
   });
 
-  const recentStudents = data
-    ? data.recent_students.map((student) => ({
-        name: student.name,
-        course: student.course ?? "—",
-        date: student.date ?? "",
-        status: paymentStatusLabels[student.payment_status] || "En attente",
-      }))
-    : fallbackRecentStudents;
+  const recentStudents = (data?.recent_students || []).map((student) => ({
+    name: student.name,
+    course: student.course ?? "—",
+    date: student.date ?? "",
+    status: paymentStatusLabels[student.payment_status] || "En attente",
+  }));
 
   return (
     <DashboardLayout role="admin">
@@ -101,10 +91,12 @@ export default function AdminDashboard() {
                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${s.color}`}>
                   <s.icon className="w-5 h-5" />
                 </div>
-                <span className={`flex items-center gap-1 text-xs font-medium ${s.up ? "text-success" : "text-accent"}`}>
-                  {s.up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
-                  {s.change}
-                </span>
+                {s.change ? (
+                  <span className={`flex items-center gap-1 text-xs font-medium ${s.up ? "text-success" : "text-accent"}`}>
+                    {s.up ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+                    {s.change}
+                  </span>
+                ) : null}
               </div>
               <div className="text-2xl font-bold text-foreground">{s.value}</div>
               <div className="text-xs text-muted-foreground mt-1">{s.label}</div>
@@ -116,7 +108,12 @@ export default function AdminDashboard() {
         <div className="bg-card rounded-2xl shadow-card overflow-hidden">
           <div className="px-6 py-4 border-b border-border flex items-center justify-between">
             <h3 className="font-heading font-semibold">Inscriptions récentes</h3>
-            <button className="text-xs text-primary font-medium hover:underline">Voir tout →</button>
+            <Link
+              to="/dashboard/admin/users?role=student"
+              className="text-xs text-primary font-medium hover:underline"
+            >
+              Voir tout →
+            </Link>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -141,6 +138,13 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
+                {!recentStudents.length && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-6 text-sm text-muted-foreground">
+                      Aucune inscription récente.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
@@ -150,7 +154,7 @@ export default function AdminDashboard() {
         <div className="grid sm:grid-cols-3 gap-4">
           {[
             { label: "Gestion utilisateurs", desc: "Ajouter, modifier ou supprimer", href: "/dashboard/admin/users" },
-            { label: "Gestion classes", desc: "Créer et organiser les classes", href: "/dashboard/admin/classes" },
+            { label: "Gestion cours", desc: "Créer et organiser les cours", href: "/dashboard/admin/classes" },
             { label: "Gestion paiements", desc: "Suivre les paiements", href: "/dashboard/admin/payments" },
           ].map((a) => (
             <Link

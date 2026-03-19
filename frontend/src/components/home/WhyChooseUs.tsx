@@ -1,13 +1,13 @@
-import { Link } from "react-router-dom";
+﻿import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, CheckCircle2, Star } from "lucide-react";
 
 const reasons = [
-  "Professeurs qualifiÃ©s et expÃ©rimentÃ©s du monde entier",
+  "Professeurs qualifiés et expérimentés du monde entier",
   "Support multilingue disponible 7j/7",
-  "Programmes personnalisÃ©s adaptÃ©s Ã  vos besoins",
-  "Sessions interactives avec des enseignants spÃ©cialisÃ©s",
-  "Apprenez Ã  votre rythme dans un environnement moderne",
+  "Programmes personnalisés adaptés à vos besoins",
+  "Sessions interactives avec des enseignants spécialisés",
+  "Apprenez à votre rythme dans un environnement moderne",
 ];
 
 const compositeImg = "/images/landing/landing-composite.jpg";
@@ -28,7 +28,7 @@ export default function WhyChooseUs() {
               <div
                 className="w-full h-[400px] lg:h-[500px] bg-cover bg-no-repeat"
                 style={{ backgroundImage: `url(${compositeImg})`, backgroundPosition: "55% 35%" }}
-                aria-label="Pourquoi JEFAL PrivÃ©"
+                aria-label="Pourquoi JEFAL Privé"
               />
             </div>
             <div className="absolute -bottom-6 -right-6 bg-card rounded-2xl p-5 shadow-float">
@@ -37,7 +37,7 @@ export default function WhyChooseUs() {
                   <Star key={s} className="w-4 h-4 fill-accent text-accent" />
                 ))}
               </div>
-              <div className="text-sm font-heading font-bold text-foreground">+1200 Ã©tudiants satisfaits</div>
+              <div className="text-sm font-heading font-bold text-foreground">+1200 étudiants satisfaits</div>
             </div>
           </motion.div>
 
@@ -48,10 +48,10 @@ export default function WhyChooseUs() {
             transition={{ duration: 0.6, delay: 0.2 }}
           >
             <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
-              Pourquoi JEFAL PrivÃ© ?
+              Pourquoi JEFAL Privé ?
             </span>
             <h2 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6">
-              Pourquoi choisir <span className="text-primary">JEFAL PrivÃ©</span> pour apprendre les langues ?
+              Pourquoi choisir <span className="text-primary">JEFAL Privé</span> pour apprendre les langues ?
             </h2>
             <ul className="space-y-4 mb-8">
               {reasons.map((r) => (
@@ -73,3 +73,5 @@ export default function WhyChooseUs() {
     </section>
   );
 }
+
+

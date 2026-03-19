@@ -86,9 +86,18 @@ class VisitorController extends Controller
             'desired_program' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
             'message' => ['nullable', 'string'],
+            'payment_method' => ['nullable', 'in:onsite,online'],
         ]);
 
-        $leadAssignmentService->createLead($validated);
+        $paymentMethod = $validated['payment_method'] ?? 'onsite';
+        $validated['payment_method'] = $paymentMethod;
+        $validated['payment_status'] = 'pending';
+
+        $lead = $leadAssignmentService->createLead($validated);
+
+        if ($paymentMethod === 'online') {
+            return redirect()->route('payments.pre-registration.redirect', $lead);
+        }
 
         return back()->with('status', 'Pre-registration submitted.');
     }

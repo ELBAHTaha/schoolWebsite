@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+﻿@extends('layouts.dashboard')
 @section('title', 'Secretary - Create Student')
 @section('dashboard-content')
 <div style="max-width:720px;margin:0 auto;padding:2.5rem 2rem 2rem 2rem;background:#f8fafc;min-height:100vh;">
@@ -48,4 +48,5 @@
     </form>
 </div>
 @endsection
+
 

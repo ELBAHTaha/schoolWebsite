@@ -1,4 +1,4 @@
-import { BookOpen, Plus } from "lucide-react";
+﻿import { BookOpen, Plus } from "lucide-react";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -36,19 +36,16 @@ import {
 import { toast } from "sonner";
 
 const classFormSchema = z.object({
-  name: z.string().min(1, "Le nom de la classe est requis"),
+  name: z.string().min(1, "Le nom du cours est requis"),
+  description: z.string().optional(),
   professor_id: z.string().optional(),
   room_id: z.string().optional(),
   price_1_month: z.string().optional(),
+  price_3_month: z.string().optional(),
+  price_6_month: z.string().optional(),
 });
 
 type ClassFormData = z.infer<typeof classFormSchema>;
-
-const fallbackClasses = [
-  { name: "DELF B2", students: 18, professor: "Marie Laurent", status: "Actif" },
-  { name: "TOEFL", students: 14, professor: "John Smith", status: "Actif" },
-  { name: "TEF", students: 9, professor: "Ahmed Mansouri", status: "Planifié" },
-];
 
 const statusStyles: Record<string, string> = {
   Actif: "bg-success/10 text-success",
@@ -66,6 +63,14 @@ interface ClassesResponse {
   }>;
 }
 
+interface ProfessorsResponse {
+  data: Array<{ id: number; name: string }>;
+}
+
+interface RoomsResponse {
+  data: Array<{ id: number; name: string; capacity: number; description: string | null; status?: string }>;
+}
+
 export default function SecretaryClasses() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const queryClient = useQueryClient();
@@ -74,9 +79,12 @@ export default function SecretaryClasses() {
     resolver: zodResolver(classFormSchema),
     defaultValues: {
       name: "",
-      professor_id: "",
-      room_id: "",
+      description: "",
+      professor_id: "none",
+      room_id: "none",
       price_1_month: "",
+      price_3_month: "",
+      price_6_month: "",
     },
   });
 
@@ -85,22 +93,42 @@ export default function SecretaryClasses() {
     queryFn: () => apiGet<ClassesResponse>("/secretary/classes"),
   });
 
+  const { data: professorsData } = useQuery({
+    queryKey: ["secretary-professors"],
+    queryFn: () => apiGet<ProfessorsResponse>("/secretary/professors"),
+  });
+
+  const { data: roomsData } = useQuery({
+    queryKey: ["secretary-rooms"],
+    queryFn: () => apiGet<RoomsResponse>("/secretary/rooms"),
+  });
+
   const createClassMutation = useMutation({
     mutationFn: (payload: ClassFormData) =>
       apiPost("/secretary/classes", {
         name: payload.name,
-        professor_id: payload.professor_id ? parseInt(payload.professor_id) : null,
-        room_id: payload.room_id ? parseInt(payload.room_id) : null,
+        description: payload.description || null,
+        professor_id:
+          payload.professor_id && payload.professor_id !== "none"
+            ? parseInt(payload.professor_id, 10)
+            : null,
+        room_id:
+          payload.room_id && payload.room_id !== "none"
+            ? parseInt(payload.room_id, 10)
+            : null,
         price_1_month: payload.price_1_month ? parseFloat(payload.price_1_month) : null,
+        price_3_month: payload.price_3_month ? parseFloat(payload.price_3_month) : null,
+        price_6_month: payload.price_6_month ? parseFloat(payload.price_6_month) : null,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["secretary-classes"] });
       setIsAddModalOpen(false);
       form.reset();
-      toast.success("Classe créée avec succès");
+      queryClient.invalidateQueries({ queryKey: ["public-classes"] });
+      toast.success("Cours créé avec succès");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Erreur lors de la création de la classe");
+      toast.error(error.message || "Erreur lors de la création du cours");
     },
   });
 
@@ -124,14 +152,14 @@ export default function SecretaryClasses() {
         students: classItem.students_count ?? 0,
         status: classItem.status || "Actif",
       }))
-    : fallbackClasses;
+    : [];
 
   return (
     <DashboardLayout role="secretary">
       <div className="space-y-6">
         <DashboardHeader
-          title="Classes"
-          subtitle="Organisation des classes et affectations"
+          title="Cours"
+          subtitle="Organisation des cours et affectations"
           action={
             <Dialog open={isAddModalOpen} onOpenChange={handleModalClose}>
               <DialogTrigger asChild>
@@ -139,14 +167,14 @@ export default function SecretaryClasses() {
                   onClick={() => setIsAddModalOpen(true)}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
                 >
-                  <Plus className="w-4 h-4" /> Nouvelle classe
+                  <Plus className="w-4 h-4" /> Nouveau cours
                 </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
+              <DialogContent className="sm:max-w-[560px]">
                 <DialogHeader>
-                  <DialogTitle>Créer une nouvelle classe</DialogTitle>
+                  <DialogTitle>Créer un nouveau cours</DialogTitle>
                   <DialogDescription>
-                    Remplissez les informations pour créer une nouvelle classe.
+                    Remplissez les informations pour créer un nouveau cours.
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -156,9 +184,22 @@ export default function SecretaryClasses() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nom de la classe</FormLabel>
+                          <FormLabel>Nom du cours</FormLabel>
                           <FormControl>
-                            <Input placeholder="Entrez le nom de la classe" {...field} />
+                            <Input placeholder="Entrez le nom du cours" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (optionnel)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Description" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -178,10 +219,12 @@ export default function SecretaryClasses() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="1">Marie Laurent</SelectItem>
-                                <SelectItem value="2">John Smith</SelectItem>
-                                <SelectItem value="3">Sara Benali</SelectItem>
-                                <SelectItem value="4">Ahmed Mansouri</SelectItem>
+                                <SelectItem value="none">Aucun</SelectItem>
+                                {(professorsData?.data || []).map((professor) => (
+                                  <SelectItem key={professor.id} value={String(professor.id)}>
+                                    {professor.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -201,10 +244,12 @@ export default function SecretaryClasses() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="1">Salle A</SelectItem>
-                                <SelectItem value="2">Salle B</SelectItem>
-                                <SelectItem value="3">Salle C</SelectItem>
-                                <SelectItem value="4">Salle D</SelectItem>
+                                <SelectItem value="none">Aucune</SelectItem>
+                                {(roomsData?.data || []).map((room) => (
+                                  <SelectItem key={room.id} value={String(room.id)}>
+                                    {room.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -212,25 +257,53 @@ export default function SecretaryClasses() {
                         )}
                       />
                     </div>
-                    <FormField
-                      control={form.control}
-                      name="price_1_month"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Prix 1 mois (DH, optionnel)</FormLabel>
-                          <FormControl>
-                            <Input type="number" placeholder="2000" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    <div className="grid grid-cols-3 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="price_1_month"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prix 1 mois (DH)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="2000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="price_3_month"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prix 3 mois (DH)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="5500" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="price_6_month"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prix 6 mois (DH)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="10000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     <div className="flex justify-end gap-3">
                       <Button type="button" variant="outline" onClick={() => handleModalClose(false)}>
                         Annuler
                       </Button>
                       <Button type="submit" disabled={createClassMutation.isPending}>
-                        {createClassMutation.isPending ? "Création..." : "Créer la classe"}
+                        {createClassMutation.isPending ? "Création..." : "Créer le cours"}
                       </Button>
                     </div>
                   </form>
@@ -243,7 +316,7 @@ export default function SecretaryClasses() {
         <div className="bg-card rounded-2xl shadow-card overflow-hidden">
           <SimpleTable
             columns={[
-              { key: "name", label: "Classe", className: "font-medium text-foreground" },
+              { key: "name", label: "Cours", className: "font-medium text-foreground" },
               { key: "professor", label: "Professeur", className: "text-muted-foreground" },
               { key: "students", label: "Étudiants" },
               {
@@ -272,3 +345,4 @@ export default function SecretaryClasses() {
     </DashboardLayout>
   );
 }
+

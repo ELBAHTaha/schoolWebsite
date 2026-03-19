@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
+use App\Models\Schedule;
 use App\Models\SchoolClass;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
@@ -13,21 +14,58 @@ class ProfessorAssignmentsController extends Controller
 {
     public function classes(Request $request): JsonResponse
     {
+        $professorId = $request->user()->id;
+        $classIds = SchoolClass::where('professor_id', $professorId)->pluck('id');
+        $scheduleClassIds = Schedule::where('professor_id', $professorId)->pluck('class_id');
+        $classIds = $classIds->merge($scheduleClassIds)->filter()->unique()->values();
+
+        logger()->info('professor.classes debug', [
+            'professor_id' => $professorId,
+            'class_ids_by_professor' => $classIds->values(),
+            'schedule_class_ids' => $scheduleClassIds->values(),
+        ]);
+
         $classes = SchoolClass::query()
-            ->where('professor_id', $request->user()->id)
+            ->with([
+                'room',
+                'schedules' => fn ($q) => $q->orderBy('day_of_week')->orderBy('starts_at'),
+            ])
+            ->whereIn('id', $classIds)
             ->orderBy('name')
-            ->get(['id', 'name']);
+            ->get();
 
         return response()->json([
-            'data' => $classes,
+            'data' => $classes->map(function (SchoolClass $class) {
+                $schedule = $class->schedules->first();
+                $studentIds = $class->students()->pluck('users.id')
+                    ->merge($class->primaryStudents()->pluck('users.id'))
+                    ->unique();
+
+                return [
+                    'id' => $class->id,
+                    'name' => $class->name,
+                    'room_name' => $class->room?->name,
+                    'students_count' => $studentIds->count(),
+                    'next_schedule' => $schedule
+                        ? [
+                            'day_of_week' => $schedule->day_of_week,
+                            'starts_at' => $schedule->starts_at,
+                            'ends_at' => $schedule->ends_at,
+                          ]
+                        : null,
+                ];
+            }),
         ]);
     }
 
     public function index(Request $request): JsonResponse
     {
-        $classIds = SchoolClass::where('professor_id', $request->user()->id)->pluck('id');
+        $professorId = $request->user()->id;
+        $classIds = SchoolClass::where('professor_id', $professorId)->pluck('id');
+        $scheduleClassIds = Schedule::where('professor_id', $professorId)->pluck('class_id');
+        $classIds = $classIds->merge($scheduleClassIds)->filter()->unique()->values();
         $assignments = Assignment::with('schoolClass')
-            ->where('professor_id', $request->user()->id)
+            ->where('professor_id', $professorId)
             ->whereIn('class_id', $classIds)
             ->latest()
             ->paginate(20);
@@ -40,6 +78,9 @@ class ProfessorAssignmentsController extends Controller
                 'due_date' => $assignment->due_date?->toDateString(),
                 'class_name' => $assignment->schoolClass?->name,
                 'document_path' => $assignment->document_path,
+                'document_url' => $assignment->document_path
+                    ? Storage::disk('public')->url($assignment->document_path)
+                    : null,
                 'created_at' => $assignment->created_at?->toDateString(),
             ]),
             'total' => $assignments->total(),
@@ -80,6 +121,9 @@ class ProfessorAssignmentsController extends Controller
                 'due_date' => $assignment->due_date?->toDateString(),
                 'class_name' => $assignment->schoolClass?->name,
                 'document_path' => $assignment->document_path,
+                'document_url' => $assignment->document_path
+                    ? Storage::disk('public')->url($assignment->document_path)
+                    : null,
             ],
         ], 201);
     }
@@ -117,6 +161,9 @@ class ProfessorAssignmentsController extends Controller
                 'due_date' => $assignment->due_date?->toDateString(),
                 'class_name' => $assignment->schoolClass?->name,
                 'document_path' => $assignment->document_path,
+                'document_url' => $assignment->document_path
+                    ? Storage::disk('public')->url($assignment->document_path)
+                    : null,
             ],
         ]);
     }
@@ -139,7 +186,8 @@ class ProfessorAssignmentsController extends Controller
     private function assertProfessorOwnsClass(int $professorId, int $classId): void
     {
         $class = SchoolClass::where('id', $classId)->where('professor_id', $professorId)->first();
-        if (!$class) {
+        $hasSchedule = Schedule::where('class_id', $classId)->where('professor_id', $professorId)->exists();
+        if (! $class && ! $hasSchedule) {
             abort(403, 'Vous n\'avez pas accès à cette classe.');
         }
     }
@@ -151,3 +199,4 @@ class ProfessorAssignmentsController extends Controller
         }
     }
 }
+

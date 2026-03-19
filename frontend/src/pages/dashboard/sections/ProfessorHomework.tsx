@@ -7,7 +7,7 @@ import { useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import DashboardHeader from "@/components/DashboardHeader";
 import SimpleTable from "@/components/dashboard/SimpleTable";
-import { apiGet, apiPost } from "@/lib/api";
+import { apiGet, apiPostForm } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -39,7 +39,7 @@ import { toast } from "sonner";
 const assignmentFormSchema = z.object({
   title: z.string().min(1, "Le titre est requis"),
   description: z.string().optional(),
-  class_id: z.string().min(1, "La classe est requise"),
+  class_id: z.string().min(1, "Le cours est requis"),
   due_date: z.string().min(1, "La date limite est requise"),
 });
 
@@ -57,6 +57,7 @@ interface Assignment {
   due_date: string | null;
   class_name: string;
   document_path: string | null;
+  document_url?: string | null;
   created_at: string;
 }
 
@@ -74,13 +75,9 @@ interface ClassesResponse {
   }>;
 }
 
-const mockAssignments = [
-  { id: 1, title: "Essay Writing", className: "TOEFL", due: "2026-03-18", status: "À corriger" },
-  { id: 2, title: "Compréhension orale", className: "DELF B2", due: "2026-03-12", status: "En cours" },
-];
-
 export default function ProfessorHomework() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const queryClient = useQueryClient();
 
   const form = useForm<AssignmentFormData>({
@@ -104,14 +101,21 @@ export default function ProfessorHomework() {
   });
 
   const createAssignmentMutation = useMutation({
-    mutationFn: (payload: AssignmentFormData) =>
-      apiPost("/professor/assignments", {
-        ...payload,
-        class_id: parseInt(payload.class_id),
-      }),
+    mutationFn: (payload: AssignmentFormData) => {
+      const formData = new FormData();
+      formData.append("title", payload.title);
+      formData.append("description", payload.description || "");
+      formData.append("class_id", payload.class_id);
+      formData.append("due_date", payload.due_date);
+      if (selectedFile) {
+        formData.append("document", selectedFile);
+      }
+      return apiPostForm("/professor/assignments", formData);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["professor-assignments"] });
       setIsAddModalOpen(false);
+      setSelectedFile(null);
       form.reset();
       toast.success("Devoir créé avec succès");
     },
@@ -133,15 +137,14 @@ export default function ProfessorHomework() {
     setIsAddModalOpen(true);
   };
 
-  const assignments = data
-    ? data.data.map((assignment) => ({
-        id: assignment.id,
-        title: assignment.title,
-        className: assignment.class_name,
-        due: assignment.due_date || "",
-        status: "À corriger", // This would need logic based on submissions
-      }))
-    : mockAssignments;
+  const assignments = (data?.data || []).map((assignment) => ({
+    id: assignment.id,
+    title: assignment.title,
+    className: assignment.class_name,
+    due: assignment.due_date || "",
+    status: "À corriger", // This would need logic based on submissions
+    documentUrl: assignment.document_url || null,
+  }));
 
   return (
     <DashboardLayout role="professor">
@@ -204,11 +207,11 @@ export default function ProfessorHomework() {
                         name="class_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Classe</FormLabel>
+                            <FormLabel>Cours</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger>
-                                  <SelectValue placeholder="Sélectionnez une classe" />
+                                  <SelectValue placeholder="Sélectionnez un cours" />
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
@@ -237,6 +240,13 @@ export default function ProfessorHomework() {
                         )}
                       />
                     </div>
+                    <div className="space-y-2">
+                      <FormLabel>Document (optionnel)</FormLabel>
+                      <Input
+                        type="file"
+                        onChange={(event) => setSelectedFile(event.target.files?.[0] || null)}
+                      />
+                    </div>
                     <div className="flex justify-end gap-3">
                       <Button type="button" variant="outline" onClick={handleModalClose}>
                         Annuler
@@ -256,7 +266,7 @@ export default function ProfessorHomework() {
           <SimpleTable
             columns={[
               { key: "title", label: "Devoir", className: "font-medium text-foreground" },
-              { key: "className", label: "Classe", className: "text-muted-foreground" },
+              { key: "className", label: "Cours", className: "text-muted-foreground" },
               { key: "due", label: "Date limite", className: "text-muted-foreground" },
               {
                 key: "status",
@@ -270,11 +280,19 @@ export default function ProfessorHomework() {
               {
                 key: "action",
                 label: "Action",
-                render: () => (
-                  <button className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20">
-                    <ClipboardList className="w-3 h-3" /> Gérer
-                  </button>
-                ),
+                render: (row) =>
+                  row.documentUrl ? (
+                    <a
+                      href={row.documentUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20"
+                    >
+                      <ClipboardList className="w-3 h-3" /> Consulter
+                    </a>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">—</span>
+                  ),
               },
             ]}
             rows={assignments}

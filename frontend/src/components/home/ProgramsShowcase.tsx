@@ -1,13 +1,13 @@
-import { useState, useCallback, useEffect } from "react";
+﻿import { useState, useCallback, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, ChevronRight, GraduationCap } from "lucide-react";
 
 const programs = [
-  { title: "Langues Pour (10–15 Ans)", cta: "Rejoignez", image: "/images/programs/anglais-10-15.png", position: "50% 35%" },
+  { title: "Langues Pour (10“15 Ans)", cta: "Rejoignez", image: "/images/programs/anglais-10-15.png", position: "50% 35%" },
   { title: "Langues Des Affaires", cta: "Commencez Les Langues Des Affaires", image: "/images/programs/anglais-affaires.png", position: "50% 35%" },
   { title: "Commencez La Préparation Au Bac", cta: "Commencez La Préparation Au Bac", image: "/images/programs/bac.png", position: "50% 55%" },
-  { title: "Langues — DELF / DALF", cta: "Commencez Les Langues", image: "/images/programs/delf-dalf.png", position: "50% 40%" },
+  { title: "Langues ” DELF / DALF", cta: "Commencez Les Langues", image: "/images/programs/delf-dalf.png", position: "50% 40%" },
   { title: "Cours En Groupe", cta: "Rejoignez Un Groupe", image: "/images/programs/groupe.png", position: "50% 40%" },
   { title: "Préparation Immigration", cta: "Commencez La Préparation", image: "/images/programs/bac.png", position: "50% 55%" },
   { title: "Cours De Langues", cta: "Commencez Les Langues", image: "/images/programs/italien.png", position: "50% 40%" },
@@ -151,3 +151,5 @@ export default function ProgramsShowcase() {
     </section>
   );
 }
+
+

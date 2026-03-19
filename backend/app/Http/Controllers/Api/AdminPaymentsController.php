@@ -63,45 +63,118 @@ class AdminPaymentsController extends Controller
         $search = trim((string) $request->query('search', ''));
         $limit = max(1, min(100, (int) $request->query('limit', 20)));
 
-        $query = Payment::query()
-            ->with(['student.schoolClass'])
+        $studentsQuery = User::query()
+            ->where('role', 'student')
+            ->with([
+                'classes',
+                'schoolClass',
+                'payments' => fn ($q) => $q->orderByDesc('created_at'),
+            ])
             ->orderByDesc('created_at');
 
         if ($search !== '') {
-            $query->whereHas('student', function ($q) use ($search) {
+            $studentsQuery->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
-        $total = (clone $query)->count();
-        $payments = $query->limit($limit)->get();
+        $total = (clone $studentsQuery)->count();
+        $students = $studentsQuery->limit($limit)->get();
 
         $month = now()->month;
         $year = now()->year;
+        $hasPayments = Payment::query()->exists();
 
-        $summary = [
-            'total_collected' => (float) Payment::where('status', 'paid')
-                ->where('month', $month)
-                ->where('year', $year)
-                ->sum('amount'),
-            'pending' => (float) Payment::where('status', 'unpaid')->sum('amount'),
-            'late' => (float) Payment::where('status', 'late')->sum('amount'),
-            'pending_count' => Payment::where('status', 'unpaid')->count(),
-            'late_count' => Payment::where('status', 'late')->count(),
-        ];
+        if ($hasPayments) {
+            $summary = [
+                'total_collected' => (float) Payment::where('status', 'paid')
+                    ->where('month', $month)
+                    ->where('year', $year)
+                    ->sum('amount'),
+                'pending' => (float) Payment::where('status', 'unpaid')->sum('amount'),
+                'late' => (float) Payment::where('status', 'late')->sum('amount'),
+                'pending_count' => Payment::where('status', 'unpaid')->count(),
+                'late_count' => Payment::where('status', 'late')->count(),
+            ];
+        } else {
+            $pending = 0.0;
+            $late = 0.0;
+            $totalCollected = 0.0;
+            $pendingCount = 0;
+            $lateCount = 0;
+
+            foreach ($students as $student) {
+                $amount = $this->resolveStudentAmount($student);
+                $status = $this->normalizeStatus($student->payment_status);
+
+                if ($status === 'paid') {
+                    $totalCollected += $amount;
+                } elseif ($status === 'late') {
+                    $late += $amount;
+                    $lateCount++;
+                } else {
+                    $pending += $amount;
+                    $pendingCount++;
+                }
+            }
+
+            $summary = [
+                'total_collected' => $totalCollected,
+                'pending' => $pending,
+                'late' => $late,
+                'pending_count' => $pendingCount,
+                'late_count' => $lateCount,
+            ];
+        }
 
         return response()->json([
             'summary' => $summary,
-            'data' => $payments->map(fn (Payment $payment) => [
-                'id' => $payment->id,
-                'student' => $payment->student?->name,
-                'course' => $payment->student?->schoolClass?->name,
-                'amount' => (float) $payment->amount,
-                'date' => optional($payment->created_at)->toDateString(),
-                'status' => $payment->status,
-            ]),
+            'data' => $students->map(function (User $student) {
+                $latestPayment = $student->payments->first();
+                $status = $latestPayment?->status ?? $this->normalizeStatus($student->payment_status);
+                $amount = $latestPayment?->amount ?? $this->resolveStudentAmount($student);
+
+                return [
+                    'id' => $latestPayment?->id ?? $student->id,
+                    'student_id' => $student->id,
+                    'student' => $student->name,
+                    'email' => $student->email,
+                    'phone' => $student->phone,
+                    'role' => $student->role,
+                    'class_ids' => $student->classes->pluck('id')->values(),
+                    'payment_status' => $student->payment_status,
+                    'course' => $student->schoolClass?->name,
+                    'amount' => (float) $amount,
+                    'date' => optional($latestPayment?->created_at)->toDateString(),
+                    'status' => $status,
+                ];
+            }),
             'total' => $total,
         ]);
+    }
+
+    private function normalizeStatus(?string $status): string
+    {
+        $value = strtolower(trim((string) $status));
+
+        return match ($value) {
+            'paid', 'paye', 'payé' => 'paid',
+            'late', 'retard', 'en_retard', 'en retard' => 'late',
+            'unpaid', 'pending', 'non_paye', 'non paye', 'non_payé', 'non payé' => 'unpaid',
+            default => 'unpaid',
+        };
+    }
+
+    private function resolveStudentAmount(User $student): float
+    {
+        $class = $student->schoolClass;
+        $amount = $student->account_balance
+            ?? $class?->price_1_month
+            ?? $class?->price_3_month
+            ?? $class?->price_6_month
+            ?? 0;
+
+        return (float) $amount;
     }
 }

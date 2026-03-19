@@ -39,9 +39,22 @@ class PublicFormController extends Controller
             'desired_program' => ['required', 'string', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
             'message' => ['nullable', 'string'],
+            'payment_method' => ['nullable', 'in:onsite,online'],
         ]);
 
+        $paymentMethod = $validated['payment_method'] ?? 'onsite';
+        $validated['payment_method'] = $paymentMethod;
+        $validated['payment_status'] = 'pending';
+
         $lead = $leadAssignmentService->createLead($validated);
+
+        if ($paymentMethod === 'online') {
+            return response()->json([
+                'message' => 'Pre-registration submitted.',
+                'lead_id' => $lead->id,
+                'redirect_url' => route('payments.pre-registration.redirect', $lead),
+            ]);
+        }
 
         return response()->json([
             'message' => 'Pre-registration submitted.',

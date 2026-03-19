@@ -50,6 +50,18 @@ export async function apiPost<T>(path: string, body: unknown): Promise<T> {
   return handleResponse<T>(response);
 }
 
+export async function apiPostForm<T>(path: string, body: FormData): Promise<T> {
+  const response = await fetch(buildUrl(path), {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+    },
+    credentials: "include",
+    body,
+  });
+  return handleResponse<T>(response);
+}
+
 export async function apiPut<T>(path: string, body: unknown): Promise<T> {
   const response = await fetch(buildUrl(path), {
     method: "PUT",

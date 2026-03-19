@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
@@ -23,3 +23,4 @@ class ContactController extends Controller
         return response()->json(['success' => true, 'message' => 'Message envoyé avec succès.']);
     }
 }
+

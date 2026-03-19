@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from "react";
+﻿import { ReactNode, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard, Users, BookOpen, DoorOpen, CreditCard, Megaphone,
@@ -21,14 +21,14 @@ const buildNav = (role: string): NavItem[] => {
       return [
         { label: "Tableau de bord", href: base, icon: LayoutDashboard },
         { label: "Étudiants", href: `${base}/students`, icon: Users },
-        { label: "Classes", href: `${base}/classes`, icon: BookOpen },
+        { label: "Cours", href: `${base}/classes`, icon: BookOpen },
         { label: "Paiements", href: `${base}/payments`, icon: CreditCard },
         { label: "Annonces", href: `${base}/announcements`, icon: Megaphone },
       ];
     case "professor":
       return [
         { label: "Tableau de bord", href: base, icon: LayoutDashboard },
-        { label: "Mes classes", href: `${base}/my-classes`, icon: BookOpen },
+        { label: "Mes cours", href: `${base}/my-classes`, icon: BookOpen },
         { label: "Documents", href: `${base}/documents`, icon: FileText },
         { label: "Devoirs", href: `${base}/homework`, icon: ClipboardList },
         { label: "Emploi du temps", href: `${base}/timetable`, icon: Calendar },
@@ -41,7 +41,6 @@ const buildNav = (role: string): NavItem[] => {
         { label: "Documents", href: `${base}/documents`, icon: Download },
         { label: "Devoirs", href: `${base}/homework`, icon: ClipboardList },
         { label: "Emploi du temps", href: `${base}/timetable`, icon: Calendar },
-        { label: "Paiements", href: `${base}/payment-status`, icon: CreditCard },
         { label: "Annonces", href: `${base}/announcements`, icon: Megaphone },
       ];
     case "admin":
@@ -49,7 +48,7 @@ const buildNav = (role: string): NavItem[] => {
       return [
         { label: "Tableau de bord", href: base, icon: LayoutDashboard },
         { label: "Utilisateurs", href: `${base}/users`, icon: Users },
-        { label: "Classes", href: `${base}/classes`, icon: BookOpen },
+        { label: "Cours", href: `${base}/classes`, icon: BookOpen },
         { label: "Salles", href: `${base}/rooms`, icon: DoorOpen },
         { label: "Paiements", href: `${base}/payments`, icon: CreditCard },
         { label: "Annonces", href: `${base}/announcements`, icon: Megaphone },
@@ -64,7 +63,7 @@ const buildNav = (role: string): NavItem[] => {
       return [
         { label: "Tableau de bord", href: base, icon: LayoutDashboard },
         { label: "Utilisateurs", href: `${base}/users`, icon: Users },
-        { label: "Classes", href: `${base}/classes`, icon: BookOpen },
+        { label: "Cours", href: `${base}/classes`, icon: BookOpen },
         { label: "Salles", href: `${base}/rooms`, icon: DoorOpen },
         { label: "Paiements", href: `${base}/payments`, icon: CreditCard },
         { label: "Annonces", href: `${base}/announcements`, icon: Megaphone },
@@ -116,7 +115,7 @@ export default function DashboardLayout({ children, role = "admin" }: Props) {
   };
 
   return (
-    <div className="min-h-screen flex bg-background relative overflow-hidden">
+    <div className="min-h-screen flex bg-background relative overflow-x-hidden">
       {/* Sidebar */}
       <aside
         className={`fixed inset-y-0 left-0 z-40 flex flex-col bg-card/95 backdrop-blur-md text-foreground border-r border-border transition-transform duration-300 w-64 overflow-hidden ${
@@ -177,7 +176,7 @@ export default function DashboardLayout({ children, role = "admin" }: Props) {
       )}
 
       {/* Main */}
-      <div className="flex-1 flex flex-col transition-all duration-300 lg:ml-64">
+      <div className="flex-1 min-w-0 flex flex-col transition-all duration-300 lg:ml-64">
         {/* Top bar */}
         <header className="sticky top-0 z-30 bg-card/90 backdrop-blur-md border-b border-border h-16 flex items-center justify-between px-4 lg:px-6">
           <div className="flex items-center gap-3">
@@ -245,3 +244,5 @@ export default function DashboardLayout({ children, role = "admin" }: Props) {
     </div>
   );
 }
+
+

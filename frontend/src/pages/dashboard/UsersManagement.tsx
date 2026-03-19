@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from "react";
+﻿import { useState } from "react";
 import { Search, Plus, Filter, Edit, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useFieldArray, useForm } from "react-hook-form";
@@ -59,14 +59,6 @@ const userFormSchema = z.object({
 
 type UserFormData = z.infer<typeof userFormSchema>;
 
-const mockUsers = Array.from({ length: 20 }, (_, i) => ({
-  id: i + 1,
-  name: ["Fatima Zahra", "Youssef Alami", "Sara Benali", "Ahmed Mansouri", "Khadija El Idrissi", "Omar Tahiri", "Leila Bouazza", "Rachid Moussaoui"][i % 8],
-  email: `user${i + 1}@email.com`,
-  role: ["student", "professor", "secretary", "admin"][i % 4],
-  status: i % 5 === 0 ? "Inactif" : "Actif",
-}));
-
 const roleStyles: Record<string, string> = {
   admin: "bg-accent/10 text-accent",
   directeur: "bg-primary/10 text-primary",
@@ -122,6 +114,8 @@ interface ClassesResponse {
 
 export default function UsersManagement() {
   const [search, setSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [page, setPage] = useState(1);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -132,6 +126,9 @@ export default function UsersManagement() {
     date: new Date().toISOString().slice(0, 10),
     months: "1",
   });
+  const [professorSchedules, setProfessorSchedules] = useState<
+    Record<string, { day_of_week: string; starts_at: string; ends_at: string }>
+  >({});
   const queryClient = useQueryClient();
   const { user: currentUser } = useAuth();
   const isAdmin = currentUser?.role === "admin";
@@ -171,10 +168,14 @@ export default function UsersManagement() {
       name: "working_hours",
     });
   const selectedRole = form.watch("role");
+  const selectedClassIds = form.watch("class_ids") || [];
 
   const { data } = useQuery({
-    queryKey: ["admin-users", search],
-    queryFn: () => apiGet<UsersResponse>(`/admin/users?search=${encodeURIComponent(search)}`),
+    queryKey: ["admin-users", search, roleFilter, page],
+    queryFn: () => {
+      const roleParam = roleFilter !== "all" ? `&role=${encodeURIComponent(roleFilter)}` : "";
+      return apiGet<UsersResponse>(`/admin/users?search=${encodeURIComponent(search)}${roleParam}&page=${page}`);
+    },
   });
 
   const { data: classesData } = useQuery({
@@ -186,7 +187,10 @@ export default function UsersManagement() {
     mutationFn: (data: UserFormData) =>
       apiPost("/admin/users", {
         ...data,
-        class_ids: data.role === "student" ? (data.class_ids || []).map((id) => parseInt(id)) : [],
+        class_ids:
+          data.role === "student" || data.role === "professor"
+            ? (data.class_ids || []).map((id) => parseInt(id))
+            : [],
         payment_status: data.role === "student" ? data.payment_status : undefined,
       }),
     onSuccess: () => {
@@ -205,7 +209,7 @@ export default function UsersManagement() {
       apiPut(`/admin/users/${id}`, {
         ...data,
         class_ids:
-          data.role === "student"
+          data.role === "student" || data.role === "professor"
             ? (data.class_ids || []).map((id) => parseInt(id))
             : [],
         payment_status: data.role === "student" ? data.payment_status : undefined,
@@ -234,6 +238,7 @@ export default function UsersManagement() {
 
   const handleEditUser = (user: any) => {
     setEditingUser(user);
+    setProfessorSchedules({});
     form.reset({
       name: user.name,
       email: user.email,
@@ -338,23 +343,52 @@ export default function UsersManagement() {
       delete preparedData.working_hours;
     }
 
+    const classSchedules =
+      selectedRole === "professor"
+        ? (data.class_ids || [])
+            .map((id) => {
+              const schedule = professorSchedules[id];
+              if (!schedule?.day_of_week || !schedule?.starts_at || !schedule?.ends_at) {
+                return null;
+              }
+              return {
+                class_id: parseInt(id, 10),
+                day_of_week: schedule.day_of_week,
+                starts_at: schedule.starts_at,
+                ends_at: schedule.ends_at,
+              };
+            })
+            .filter(Boolean)
+        : [];
+
+    if (selectedRole === "professor" && (data.class_ids || []).length > 0 && classSchedules.length === 0) {
+      toast.error("Veuillez renseigner le planning pour chaque cours assigné.");
+      return;
+    }
+
     if (editingUser) {
       const updateData = { ...preparedData };
       if (!updateData.password) {
         delete updateData.password; // Don't send empty password for updates
       }
-      if (updateData.role !== "student") {
+      if (updateData.role !== "student" && updateData.role !== "professor") {
         delete updateData.class_ids;
         delete updateData.payment_status;
+      }
+      if (selectedRole === "professor") {
+        (updateData as any).class_schedules = classSchedules;
       }
       updateUserMutation.mutate({
         id: editingUser.id,
         data: updateData,
       });
     } else {
-      if (preparedData.role !== "student") {
+      if (preparedData.role !== "student" && preparedData.role !== "professor") {
         delete preparedData.class_ids;
         delete preparedData.payment_status;
+      }
+      if (selectedRole === "professor") {
+        (preparedData as any).class_schedules = classSchedules;
       }
       createUserMutation.mutate(preparedData as Required<UserFormData>);
     }
@@ -366,21 +400,7 @@ export default function UsersManagement() {
     form.reset();
   };
 
-  const fallbackUsers = useMemo(
-    () =>
-      mockUsers
-        .filter((u) =>
-          u.name.toLowerCase().includes(search.toLowerCase()) || u.email.includes(search.toLowerCase())
-        )
-        .map((u) => ({
-          ...u,
-          roleLabel: roleLabels[u.role] ?? "Utilisateur",
-        })),
-    [search]
-  );
-
-  const users = data
-    ? data.data.map((user) => ({
+    const users = (data?.data || []).map((user) => ({
         id: user.id,
         name: user.name,
         email: user.email,
@@ -390,15 +410,18 @@ export default function UsersManagement() {
         status: user.status === "inactive" ? "Inactif" : "Actif",
         class_ids: user.class_ids || [],
         payment_status: user.payment_status,
-      }))
-    : fallbackUsers;
+      }));
+  const perPage = data?.per_page ?? 10;
+  const total = data?.total ?? users.length;
+  const currentPage = data?.current_page ?? page;
+  const totalPages = Math.max(1, Math.ceil(total / perPage));
 
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <DashboardHeader
           title="Gestion des utilisateurs"
-          subtitle={`${data?.total ?? mockUsers.length} utilisateurs au total`}
+          subtitle={`${data?.total ?? 0} utilisateurs au total`}
           action={
             <Dialog
               open={isAddModalOpen || !!editingUser}
@@ -418,7 +441,7 @@ export default function UsersManagement() {
                   <Plus className="w-4 h-4" /> Ajouter
                 </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-hidden">
                 <DialogHeader>
                   <DialogTitle>
                     {editingUser ? "Modifier l'utilisateur" : "Ajouter un utilisateur"}
@@ -430,8 +453,9 @@ export default function UsersManagement() {
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="flex max-h-[75vh] flex-col">
+                    <div className="flex-1 space-y-4 overflow-y-auto pr-1">
+                      <FormField
                       control={form.control}
                       name="name"
                       render={({ field }) => (
@@ -444,7 +468,7 @@ export default function UsersManagement() {
                         </FormItem>
                       )}
                     />
-                    <FormField
+                      <FormField
                       control={form.control}
                       name="email"
                       render={({ field }) => (
@@ -457,7 +481,7 @@ export default function UsersManagement() {
                         </FormItem>
                       )}
                     />
-                    <FormField
+                      <FormField
                       control={form.control}
                       name="password"
                       render={({ field }) => (
@@ -476,7 +500,7 @@ export default function UsersManagement() {
                         </FormItem>
                       )}
                     />
-                    <FormField
+                      <FormField
                       control={form.control}
                       name="role"
                       render={({ field }) => (
@@ -500,7 +524,7 @@ export default function UsersManagement() {
                         </FormItem>
                       )}
                     />
-                    <FormField
+                      <FormField
                       control={form.control}
                       name="phone"
                       render={({ field }) => (
@@ -513,13 +537,15 @@ export default function UsersManagement() {
                         </FormItem>
                       )}
                     />
-                    {selectedRole === "student" && (
+                    {(selectedRole === "student" || selectedRole === "professor") && (
                       <FormField
                         control={form.control}
                         name="class_ids"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Cours suivis</FormLabel>
+                            <FormLabel>
+                              {selectedRole === "student" ? "Cours suivis" : "Cours assignés"}
+                            </FormLabel>
                             <div className="grid grid-cols-2 gap-3 rounded-lg border border-input bg-background p-3">
                               {(classesData?.data || []).map((classItem) => {
                                 const isChecked = (field.value || []).includes(String(classItem.id));
@@ -545,7 +571,7 @@ export default function UsersManagement() {
                               })}
                               {!classesData?.data?.length && (
                                 <div className="text-xs text-muted-foreground">
-                                  Aucune classe disponible.
+                                  Aucun cours disponible.
                                 </div>
                               )}
                             </div>
@@ -554,8 +580,86 @@ export default function UsersManagement() {
                         )}
                       />
                     )}
-                    {selectedRole === "student" && (
-                      <FormField
+                    {selectedRole === "professor" && (
+                      <div className="space-y-3 rounded-lg border border-border p-3">
+                        <div className="text-sm font-medium text-foreground">
+                          Planning des cours assignés
+                        </div>
+                        {(selectedClassIds || []).map((classId) => {
+                          const classItem = (classesData?.data || []).find(
+                            (item) => String(item.id) === String(classId)
+                          );
+                          const schedule = professorSchedules[classId] || {
+                            day_of_week: "",
+                            starts_at: "",
+                            ends_at: "",
+                          };
+
+                          return (
+                            <div key={classId} className="grid grid-cols-3 gap-2 items-center">
+                              <div className="col-span-3 text-xs text-muted-foreground">
+                                {classItem?.name || "Cours"}
+                              </div>
+                              <select
+                                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                                value={schedule.day_of_week}
+                                onChange={(event) =>
+                                  setProfessorSchedules((prev) => ({
+                                    ...prev,
+                                    [classId]: {
+                                      ...schedule,
+                                      day_of_week: event.target.value,
+                                    },
+                                  }))
+                                }
+                              >
+                                <option value="">Jour</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                                <option value="Sunday">Sunday</option>
+                              </select>
+                              <Input
+                                type="time"
+                                value={schedule.starts_at}
+                                onChange={(event) =>
+                                  setProfessorSchedules((prev) => ({
+                                    ...prev,
+                                    [classId]: {
+                                      ...schedule,
+                                      starts_at: event.target.value,
+                                    },
+                                  }))
+                                }
+                              />
+                              <Input
+                                type="time"
+                                value={schedule.ends_at}
+                                onChange={(event) =>
+                                  setProfessorSchedules((prev) => ({
+                                    ...prev,
+                                    [classId]: {
+                                      ...schedule,
+                                      ends_at: event.target.value,
+                                    },
+                                  }))
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                        {!selectedClassIds?.length && (
+                          <div className="text-xs text-muted-foreground">
+                            Sélectionnez au moins un cours pour définir le planning.
+                          </div>
+                        )}
+                      </div>
+                    )}
+                      {selectedRole === "student" && (
+                        <FormField
                         control={form.control}
                         name="payment_status"
                         render={({ field }) => (
@@ -578,56 +682,57 @@ export default function UsersManagement() {
                         )}
                       />
                     )}
-                    {selectedRole === "professor" && (
-                      <div className="space-y-3 rounded-lg border border-border p-3">
-                        <div className="flex items-center justify-between">
-                          <FormLabel className="text-sm">Horaires de travail</FormLabel>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() =>
-                              appendWorkingHour({ day: "", starts_at: "", ends_at: "" })
-                            }
-                          >
-                            Ajouter
-                          </Button>
-                        </div>
-                        {workingHourFields.map((field, index) => (
-                          <div key={field.id} className="grid grid-cols-3 gap-2">
-                            <select
-                              className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
-                              {...form.register(`working_hours.${index}.day` as const)}
+                      {selectedRole === "professor" && (
+                        <div className="space-y-3 rounded-lg border border-border p-3">
+                          <div className="flex items-center justify-between">
+                            <FormLabel className="text-sm">Horaires de travail</FormLabel>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() =>
+                                appendWorkingHour({ day: "", starts_at: "", ends_at: "" })
+                              }
                             >
-                              <option value="">Jour</option>
-                              <option value="Monday">Monday</option>
-                              <option value="Tuesday">Tuesday</option>
-                              <option value="Wednesday">Wednesday</option>
-                              <option value="Thursday">Thursday</option>
-                              <option value="Friday">Friday</option>
-                              <option value="Saturday">Saturday</option>
-                              <option value="Sunday">Sunday</option>
-                            </select>
-                            <Input
-                              type="time"
-                              {...form.register(`working_hours.${index}.starts_at` as const)}
-                            />
-                            <div className="flex gap-2">
+                              Ajouter
+                            </Button>
+                          </div>
+                          {workingHourFields.map((field, index) => (
+                            <div key={field.id} className="grid grid-cols-3 gap-2">
+                              <select
+                                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm"
+                                {...form.register(`working_hours.${index}.day` as const)}
+                              >
+                                <option value="">Jour</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                                <option value="Saturday">Saturday</option>
+                                <option value="Sunday">Sunday</option>
+                              </select>
                               <Input
                                 type="time"
-                                {...form.register(`working_hours.${index}.ends_at` as const)}
+                                {...form.register(`working_hours.${index}.starts_at` as const)}
                               />
-                              <Button
-                                type="button"
-                                variant="outline"
-                                onClick={() => removeWorkingHour(index)}
-                              >
-                                Retirer
-                              </Button>
+                              <div className="flex gap-2">
+                                <Input
+                                  type="time"
+                                  {...form.register(`working_hours.${index}.ends_at` as const)}
+                                />
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  onClick={() => removeWorkingHour(index)}
+                                >
+                                  Retirer
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex justify-end gap-3 pt-4">
                       <Button
                         type="button"
@@ -657,23 +762,45 @@ export default function UsersManagement() {
         <div className="bg-card rounded-2xl shadow-card overflow-hidden">
           {/* Search */}
           <div className="px-6 py-4 border-b border-border flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
+            <div className="relative flex-1 min-w-0">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <input
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setPage(1);
+                }}
                 className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 placeholder="Rechercher un utilisateur..."
               />
             </div>
-            <button className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-input text-sm hover:bg-secondary transition-colors">
-              <Filter className="w-4 h-4" /> Filtrer
-            </button>
+            <div className="flex items-center gap-2">
+              <Filter className="w-4 h-4 text-muted-foreground" />
+              <Select
+                value={roleFilter}
+                onValueChange={(value) => {
+                  setRoleFilter(value);
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filtrer par rôle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tous les rôles</SelectItem>
+                  {roleOptions.map((role) => (
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[720px] text-sm">
               <thead>
                 <tr className="border-b border-border bg-secondary/50">
                   <th className="text-left px-6 py-3 font-medium text-muted-foreground">ID</th>
@@ -686,7 +813,7 @@ export default function UsersManagement() {
                 </tr>
               </thead>
               <tbody>
-                {users.slice(0, 10).map((u) => (
+                {users.map((u) => (
                   <tr key={u.id} className="border-b border-border last:border-0 hover:bg-secondary/30 transition-colors">
                     <td className="px-6 py-3 text-muted-foreground">#{u.id}</td>
                     <td className="px-6 py-3 font-medium text-foreground">{u.name}</td>
@@ -705,12 +832,14 @@ export default function UsersManagement() {
                       {u.role === "student" ? (
                         <button
                           type="button"
-                          onClick={() =>
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
                             openPaymentModal(
                               u,
                               (u.payment_status || "pending") === "paid" ? "paid" : "pending"
-                            )
-                          }
+                            );
+                          }}
                           className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
                             paymentStatusStyles[u.payment_status || "pending"]
                           }`}
@@ -745,13 +874,28 @@ export default function UsersManagement() {
           </div>
 
           {/* Pagination */}
-          <div className="px-6 py-4 border-t border-border flex items-center justify-between text-sm text-muted-foreground">
-            <span>Affichage 1-10 sur {users.length}</span>
+          <div className="px-6 py-4 border-t border-border flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-muted-foreground">
+            <span>
+              Affichage {(currentPage - 1) * perPage + 1}-{Math.min(currentPage * perPage, total)} sur {total}
+            </span>
             <div className="flex items-center gap-1">
-              <button className="p-2 rounded-lg hover:bg-secondary"><ChevronLeft className="w-4 h-4" /></button>
-              <button className="px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium">1</button>
-              <button className="px-3 py-1 rounded-lg hover:bg-secondary text-xs">2</button>
-              <button className="p-2 rounded-lg hover:bg-secondary"><ChevronRight className="w-4 h-4" /></button>
+              <button
+                className="p-2 rounded-lg hover:bg-secondary disabled:opacity-50"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage <= 1}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <span className="px-3 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-medium">
+                {currentPage}
+              </span>
+              <button
+                className="p-2 rounded-lg hover:bg-secondary disabled:opacity-50"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
             </div>
           </div>
         </div>
@@ -767,7 +911,7 @@ export default function UsersManagement() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <FormLabel>Statut</FormLabel>
+              <label className="block text-sm font-medium mb-1.5 text-foreground">Statut</label>
               <Select
                 value={paymentStatusTarget}
                 onValueChange={(value) => setPaymentStatusTarget(value as "paid" | "pending")}
@@ -784,7 +928,7 @@ export default function UsersManagement() {
             {paymentStatusTarget === "paid" && (
               <>
                 <div>
-                  <FormLabel>Montant</FormLabel>
+                  <label className="block text-sm font-medium mb-1.5 text-foreground">Montant</label>
                   <Input
                     type="number"
                     step="0.01"
@@ -794,7 +938,7 @@ export default function UsersManagement() {
                   />
                 </div>
                 <div>
-                  <FormLabel>Date</FormLabel>
+                  <label className="block text-sm font-medium mb-1.5 text-foreground">Date</label>
                   <Input
                     type="date"
                     value={paymentForm.date}
@@ -802,7 +946,7 @@ export default function UsersManagement() {
                   />
                 </div>
                 <div>
-                  <FormLabel>Nombre de mois</FormLabel>
+                  <label className="block text-sm font-medium mb-1.5 text-foreground">Nombre de mois</label>
                   <Input
                     type="number"
                     min="1"
@@ -826,3 +970,5 @@ export default function UsersManagement() {
     </DashboardLayout>
   );
 }
+
+

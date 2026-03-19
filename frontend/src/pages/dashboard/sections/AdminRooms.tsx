@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+﻿import { Plus } from "lucide-react";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
@@ -35,13 +35,6 @@ const roomFormSchema = z.object({
 });
 
 type RoomFormData = z.infer<typeof roomFormSchema>;
-
-const fallbackRooms = [
-  { name: "Salle A", capacity: 24, description: "Projecteur, Tableau", status: "Disponible" },
-  { name: "Salle B", capacity: 18, description: "Tableau", status: "Disponible" },
-  { name: "Salle C", capacity: 20, description: "Projecteur", status: "Disponible" },
-  { name: "Salle D", capacity: 12, description: "Tableau", status: "Disponible" },
-];
 
 const statusStyles: Record<string, string> = {
   Disponible: "bg-success/10 text-success",
@@ -92,14 +85,12 @@ export default function AdminRooms() {
     createRoomMutation.mutate(payload);
   };
 
-  const rooms = data?.data?.length
-    ? data.data.map((room) => ({
-        name: room.name,
-        capacity: room.capacity,
-        description: room.description || "—",
-        status: room.status || "Disponible",
-      }))
-    : fallbackRooms;
+  const rooms = (data?.data || []).map((room) => ({
+    name: room.name,
+    capacity: room.capacity,
+    description: room.description || "—",
+    status: room.status || "Disponible",
+  }));
 
   return (
     <DashboardLayout role="admin">

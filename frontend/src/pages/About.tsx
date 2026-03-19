@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+﻿import { motion } from "framer-motion";
 import { CheckCircle2, Target, Eye, Users, Award, Heart } from "lucide-react";
 import PublicLayout from "@/components/PublicLayout";
 import AnimatedCounter from "@/components/AnimatedCounter";
@@ -130,3 +130,5 @@ export default function About() {
     </PublicLayout>
   );
 }
+
+

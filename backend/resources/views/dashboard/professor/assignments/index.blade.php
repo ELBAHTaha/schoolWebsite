@@ -1,4 +1,4 @@
-@extends('layouts.dashboard')
+﻿@extends('layouts.dashboard')
 @section('title', 'Professor - Assignments')
 @section('dashboard-content')
 <div style="max-width:1200px;margin:0 auto;padding:2.5rem 2rem 2rem 2rem;background:#f8fafc;min-height:100vh;">
@@ -33,4 +33,5 @@
     </div>
 </div>
 @endsection
+
 

@@ -58,7 +58,7 @@ class AdminClassesController extends Controller
         $class = SchoolClass::create($validated);
 
         return response()->json([
-            'message' => 'Classe créée avec succès',
+            'message' => 'Cours créé avec succès',
             'class' => [
                 'id' => $class->id,
                 'name' => $class->name,
@@ -87,7 +87,7 @@ class AdminClassesController extends Controller
         $class->update($validated);
 
         return response()->json([
-            'message' => 'Classe mise à jour avec succès',
+            'message' => 'Cours mis à jour avec succès',
             'class' => [
                 'id' => $class->id,
                 'name' => $class->name,
@@ -106,7 +106,7 @@ class AdminClassesController extends Controller
         $class->delete();
 
         return response()->json([
-            'message' => 'Classe supprimée avec succès',
+            'message' => 'Cours supprimé avec succès',
         ]);
     }
 }

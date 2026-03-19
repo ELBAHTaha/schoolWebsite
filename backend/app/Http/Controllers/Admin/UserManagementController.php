@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 
 namespace App\Http\Controllers\Admin;
 
@@ -100,3 +100,4 @@ class UserManagementController extends Controller
         return back()->with('status', 'Horaires professeur mis à jour.');
     }
 }
+

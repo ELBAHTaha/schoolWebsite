@@ -4,7 +4,6 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Assignment;
-use App\Models\Homework;
 use App\Models\Payment;
 use App\Models\Pdf;
 use App\Models\PreRegistrationLead;
@@ -64,11 +63,11 @@ class DashboardController extends Controller
 
         $classIds = $classes->pluck('id')->filter()->values();
 
-        $homeworks = $classIds->isEmpty()
+        $assignments = $classIds->isEmpty()
             ? collect()
-            : Homework::with('schoolClass')
+            : Assignment::with('schoolClass')
                 ->whereIn('class_id', $classIds)
-                ->orderBy('deadline')
+                ->orderBy('due_date')
                 ->take(6)
                 ->get();
 
@@ -78,25 +77,38 @@ class DashboardController extends Controller
 
         $stats = [
             'courses' => $classes->count(),
-            'homework_pending' => $homeworks->where('deadline', '>=', now()->toDateString())->count(),
+            'homework_pending' => $assignments->where('due_date', '>=', now()->toDateString())->count(),
             'documents' => $documentsCount,
             'payment_status' => $user?->payment_status ?? 'pending',
         ];
 
         return response()->json([
             'stats' => $stats,
-            'courses' => $classes->map(fn (SchoolClass $class) => [
-                'id' => $class->id,
-                'name' => $class->name,
-                'professor' => $class->professor?->name,
-                'schedule' => null,
-            ]),
-            'homework' => $homeworks->map(fn (Homework $homework) => [
-                'id' => $homework->id,
-                'title' => $homework->title,
-                'course' => $homework->schoolClass?->name,
-                'due' => optional($homework->deadline)->toDateString(),
-                'status' => optional($homework->deadline)->isPast() ? 'En retard' : 'À faire',
+            'courses' => $classes->map(function (SchoolClass $class) {
+                $schedule = Schedule::where('class_id', $class->id)
+                    ->orderBy('day_of_week')
+                    ->orderBy('starts_at')
+                    ->first();
+
+                return [
+                    'id' => $class->id,
+                    'name' => $class->name,
+                    'professor' => $class->professor?->name,
+                    'schedule' => $schedule
+                        ? [
+                            'day_of_week' => $schedule->day_of_week,
+                            'starts_at' => $schedule->starts_at,
+                            'ends_at' => $schedule->ends_at,
+                          ]
+                        : null,
+                ];
+            }),
+            'homework' => $assignments->map(fn (Assignment $assignment) => [
+                'id' => $assignment->id,
+                'title' => $assignment->title,
+                'course' => $assignment->schoolClass?->name,
+                'due' => optional($assignment->due_date)->toDateString(),
+                'status' => optional($assignment->due_date)->isPast() ? 'En retard' : 'À faire',
             ]),
         ]);
     }
@@ -188,3 +200,4 @@ class DashboardController extends Controller
         ]);
     }
 }
+

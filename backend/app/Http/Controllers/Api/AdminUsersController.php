@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreUserRequest;
 use App\Mail\AccountCreatedMail;
 use App\Models\ProfessorWorkingHour;
+use App\Models\SchoolClass;
+use App\Models\Schedule;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -35,9 +37,7 @@ class AdminUsersController extends Controller
             $query->where('role', $role);
         }
 
-        $total = (clone $query)->count();
-
-        $users = $query->limit($limit)->get();
+        $users = $query->paginate($limit);
 
         return response()->json([
             'data' => $users->map(fn (User $user) => [
@@ -47,11 +47,15 @@ class AdminUsersController extends Controller
                 'phone' => $user->phone,
                 'role' => $user->role,
                 'status' => $user->role === 'visitor' ? 'inactive' : 'active',
-                'class_ids' => $user->classes->pluck('id')->values(),
+                'class_ids' => $user->role === 'professor'
+                    ? SchoolClass::where('professor_id', $user->id)->pluck('id')->values()
+                    : $user->classes->pluck('id')->values(),
                 'payment_status' => $user->payment_status,
                 'created_at' => optional($user->created_at)->toDateString(),
             ]),
-            'total' => $total,
+            'total' => $users->total(),
+            'per_page' => $users->perPage(),
+            'current_page' => $users->currentPage(),
         ]);
     }
 
@@ -60,9 +64,11 @@ class AdminUsersController extends Controller
         $validated = $request->validated();
         $workingHours = $validated['working_hours'] ?? [];
         $classIds = $validated['class_ids'] ?? [];
+        $classSchedules = $validated['class_schedules'] ?? [];
         $paymentStatus = $validated['payment_status'] ?? null;
         unset($validated['working_hours']);
         unset($validated['class_ids']);
+        unset($validated['class_schedules']);
         unset($validated['payment_status']);
         $plainPassword = $validated['password'];
         $classId = $validated['class_id'] ?? null;
@@ -84,6 +90,9 @@ class AdminUsersController extends Controller
             $user->classes()->sync($classIds);
         }
         if ($user->role === 'professor') {
+            if (!empty($classIds)) {
+                SchoolClass::whereIn('id', $classIds)->update(['professor_id' => $user->id]);
+            }
             $slots = collect($workingHours)
                 ->filter(fn ($slot) => !empty($slot['day']) && !empty($slot['starts_at']) && !empty($slot['ends_at']));
 
@@ -94,6 +103,19 @@ class AdminUsersController extends Controller
                     'starts_at' => $slot['starts_at'],
                     'ends_at' => $slot['ends_at'],
                 ]);
+            }
+
+            if (!empty($classSchedules)) {
+                Schedule::where('professor_id', $user->id)->delete();
+                foreach ($classSchedules as $schedule) {
+                    Schedule::create([
+                        'class_id' => $schedule['class_id'],
+                        'professor_id' => $user->id,
+                        'day_of_week' => $schedule['day_of_week'],
+                        'starts_at' => $schedule['starts_at'],
+                        'ends_at' => $schedule['ends_at'],
+                    ]);
+                }
             }
         }
 
@@ -108,7 +130,7 @@ class AdminUsersController extends Controller
         }
 
         return response()->json([
-            'message' => 'Utilisateur crÃ©Ã© avec succÃ¨s',
+            'message' => 'Utilisateur créé avec succès',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -146,7 +168,12 @@ class AdminUsersController extends Controller
             'class_id' => ['nullable', 'integer', 'exists:classes,id'],
             'class_ids' => ['nullable', 'array'],
             'class_ids.*' => ['integer', 'exists:classes,id'],
-            'payment_status' => ['nullable', 'in:paid,pending,late'],
+            'class_schedules' => ['nullable', 'array'],
+            'class_schedules.*.class_id' => ['required', 'integer', 'exists:classes,id'],
+            'class_schedules.*.day_of_week' => ['required', 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
+            'class_schedules.*.starts_at' => ['required', 'date_format:H:i'],
+            'class_schedules.*.ends_at' => ['required', 'date_format:H:i'],
+            'payment_status' => ['required_if:role,student', 'in:paid,pending,late'],
             'working_hours' => ['nullable', 'array'],
             'working_hours.*.day' => ['nullable', 'in:Monday,Tuesday,Wednesday,Thursday,Friday,Saturday,Sunday'],
             'working_hours.*.starts_at' => ['nullable', 'date_format:H:i'],
@@ -155,9 +182,11 @@ class AdminUsersController extends Controller
 
         $workingHours = $validated['working_hours'] ?? null;
         $classIds = $validated['class_ids'] ?? null;
+        $classSchedules = $validated['class_schedules'] ?? null;
         $paymentStatus = $validated['payment_status'] ?? null;
         unset($validated['working_hours']);
         unset($validated['class_ids']);
+        unset($validated['class_schedules']);
         unset($validated['payment_status']);
 
         $updateData = [
@@ -177,9 +206,7 @@ class AdminUsersController extends Controller
                 $classId = $classIds[0];
             }
             $updateData['class_id'] = $classId;
-            if ($paymentStatus) {
-                $updateData['payment_status'] = $paymentStatus;
-            }
+            $updateData['payment_status'] = $paymentStatus ?? $user->payment_status ?? 'pending';
         } else {
             $updateData['class_id'] = null;
             $updateData['payment_status'] = null;
@@ -194,6 +221,7 @@ class AdminUsersController extends Controller
         }
 
         if ($validated['role'] !== 'professor') {
+            SchoolClass::where('professor_id', $user->id)->update(['professor_id' => null]);
             $user->workingHours()->delete();
         } elseif (is_array($workingHours)) {
             $user->workingHours()->delete();
@@ -209,8 +237,28 @@ class AdminUsersController extends Controller
             }
         }
 
+        if ($validated['role'] === 'professor' && is_array($classIds)) {
+            SchoolClass::whereIn('id', $classIds)->update(['professor_id' => $user->id]);
+            SchoolClass::where('professor_id', $user->id)
+                ->whereNotIn('id', $classIds)
+                ->update(['professor_id' => null]);
+        }
+
+        if ($validated['role'] === 'professor' && is_array($classSchedules)) {
+            Schedule::where('professor_id', $user->id)->delete();
+            foreach ($classSchedules as $schedule) {
+                Schedule::create([
+                    'class_id' => $schedule['class_id'],
+                    'professor_id' => $user->id,
+                    'day_of_week' => $schedule['day_of_week'],
+                    'starts_at' => $schedule['starts_at'],
+                    'ends_at' => $schedule['ends_at'],
+                ]);
+            }
+        }
+
         return response()->json([
-            'message' => 'Utilisateur mis Ã  jour avec succÃ¨s',
+            'message' => 'Utilisateur mis à jour avec succès',
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -241,7 +289,7 @@ class AdminUsersController extends Controller
         $user->delete();
 
         return response()->json([
-            'message' => 'Utilisateur supprimÃ© avec succÃ¨s',
+            'message' => 'Utilisateur supprimé avec succès',
         ]);
     }
 }

@@ -3,7 +3,7 @@
         'name' => 'jefal-prive/school-management',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '11c2e70478cac33bf2c4f8ae8bad3baa80c87e32',
+        'reference' => 'a46bbb5fe28beb8eb0113163547a7d834e0a7dca',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -334,7 +334,7 @@
         'jefal-prive/school-management' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => '11c2e70478cac33bf2c4f8ae8bad3baa80c87e32',
+            'reference' => 'a46bbb5fe28beb8eb0113163547a7d834e0a7dca',
             'type' => 'project',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

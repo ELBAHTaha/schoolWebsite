@@ -36,27 +36,48 @@ import {
 import { toast } from "sonner";
 
 const classFormSchema = z.object({
-  name: z.string().min(1, "Le nom de la classe est requis"),
-  professor_id: z.string().min(1, "Le professeur est requis"),
-  room_id: z.string().min(1, "La salle est requise"),
-  price: z.string().min(1, "Le prix est requis"),
-  max_students: z.string().min(1, "Le nombre maximum d'étudiants est requis"),
+  name: z.string().min(1, "Le nom du cours est requis"),
+  description: z.string().optional(),
+  professor_id: z.string().optional(),
+  room_id: z.string().optional(),
+  price_1_month: z.string().optional(),
+  price_3_month: z.string().optional(),
+  price_6_month: z.string().optional(),
 });
 
 type ClassFormData = z.infer<typeof classFormSchema>;
-
-const classes = [
-  { name: "DELF B2", professor: "Marie Laurent", room: "Salle A", students: 18, price: "2,000 DH", status: "Actif" },
-  { name: "TOEFL", professor: "John Smith", room: "Salle C", students: 14, price: "2,500 DH", status: "Actif" },
-  { name: "IELTS", professor: "Sara Benali", room: "Salle B", students: 12, price: "2,500 DH", status: "Planifié" },
-  { name: "TEF", professor: "Ahmed Mansouri", room: "Salle D", students: 9, price: "1,800 DH", status: "Pause" },
-];
 
 const statusStyles: Record<string, string> = {
   Actif: "bg-success/10 text-success",
   Planifié: "bg-warning/10 text-warning",
   Pause: "bg-muted text-muted-foreground",
 };
+
+interface ClassesResponse {
+  data: Array<{
+    id: number;
+    name: string;
+    description: string | null;
+    professor_name: string | null;
+    room_name: string | null;
+    price_1_month: number | null;
+    price_3_month: number | null;
+    price_6_month: number | null;
+    students_count: number;
+    status: string;
+  }>;
+  total: number;
+  per_page: number;
+  current_page: number;
+}
+
+interface ProfessorsResponse {
+  data: Array<{ id: number; name: string }>;
+}
+
+interface RoomsResponse {
+  data: Array<{ id: number; name: string; capacity: number; description: string | null; status?: string }>;
+}
 
 export default function AdminClasses() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -67,34 +88,61 @@ export default function AdminClasses() {
     resolver: zodResolver(classFormSchema),
     defaultValues: {
       name: "",
-      professor_id: "",
-      room_id: "",
-      price: "",
-      max_students: "",
+      description: "",
+      professor_id: "none",
+      room_id: "none",
+      price_1_month: "",
+      price_3_month: "",
+      price_6_month: "",
     },
   });
 
+  const { data } = useQuery({
+    queryKey: ["admin-classes", search],
+    queryFn: () => apiGet<ClassesResponse>(`/admin/classes?search=${encodeURIComponent(search)}`),
+  });
+
+  const { data: professorsData } = useQuery({
+    queryKey: ["admin-professors"],
+    queryFn: () => apiGet<ProfessorsResponse>("/admin/users?role=professor&limit=200"),
+  });
+
+  const { data: roomsData } = useQuery({
+    queryKey: ["admin-rooms"],
+    queryFn: () => apiGet<RoomsResponse>("/admin/rooms"),
+  });
+
   const createClassMutation = useMutation({
-    mutationFn: (data: ClassFormData) => apiPost("/admin/classes", {
-      ...data,
-      professor_id: parseInt(data.professor_id),
-      room_id: parseInt(data.room_id),
-      price: parseFloat(data.price),
-      max_students: parseInt(data.max_students),
-    }),
+    mutationFn: (payload: ClassFormData) =>
+      apiPost("/admin/classes", {
+        name: payload.name,
+        description: payload.description || null,
+        professor_id:
+          payload.professor_id && payload.professor_id !== "none"
+            ? parseInt(payload.professor_id, 10)
+            : null,
+        room_id:
+          payload.room_id && payload.room_id !== "none"
+            ? parseInt(payload.room_id, 10)
+            : null,
+        price_1_month: payload.price_1_month ? parseFloat(payload.price_1_month) : null,
+        price_3_month: payload.price_3_month ? parseFloat(payload.price_3_month) : null,
+        price_6_month: payload.price_6_month ? parseFloat(payload.price_6_month) : null,
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-classes"] });
       setIsAddModalOpen(false);
       form.reset();
-      toast.success("Classe créée avec succès");
+      queryClient.invalidateQueries({ queryKey: ["public-classes"] });
+      toast.success("Cours créé avec succès");
     },
     onError: (error: any) => {
-      toast.error(error.message || "Erreur lors de la création de la classe");
+      toast.error(error.message || "Erreur lors de la création du cours");
     },
   });
 
-  const onSubmit = (data: ClassFormData) => {
-    createClassMutation.mutate(data);
+  const onSubmit = (payload: ClassFormData) => {
+    createClassMutation.mutate(payload);
   };
 
   const handleModalClose = (open: boolean) => {
@@ -106,17 +154,23 @@ export default function AdminClasses() {
     setIsAddModalOpen(true);
   };
 
-  const filteredClasses = classes.filter((classItem) =>
-    classItem.name.toLowerCase().includes(search.toLowerCase()) ||
-    classItem.professor.toLowerCase().includes(search.toLowerCase()) ||
-    classItem.room.toLowerCase().includes(search.toLowerCase())
-  );
+  const rows = data?.data?.length
+    ? data.data.map((classItem) => ({
+        name: classItem.name,
+        professor: classItem.professor_name || "—",
+        room: classItem.room_name || "—",
+        students: classItem.students_count ?? 0,
+        price: classItem.price_1_month ? `${classItem.price_1_month} DH` : "—",
+        status: classItem.status || "Actif",
+      }))
+    : [];
+
   return (
     <DashboardLayout role="admin">
       <div className="space-y-6">
         <DashboardHeader
-          title="Gestion des classes"
-          subtitle="Créez, organisez et suivez les classes"
+          title="Gestion des cours"
+          subtitle="Créez, organisez et suivez les cours"
           action={
             <Dialog open={isAddModalOpen} onOpenChange={handleModalClose}>
               <DialogTrigger asChild>
@@ -124,14 +178,14 @@ export default function AdminClasses() {
                   onClick={() => setIsAddModalOpen(true)}
                   className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-semibold hover:opacity-90 transition-opacity"
                 >
-                  <Plus className="w-4 h-4" /> Nouvelle classe
+                  <Plus className="w-4 h-4" /> Nouveau cours
                 </button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[500px]">
+              <DialogContent className="sm:max-w-[560px]">
                 <DialogHeader>
-                  <DialogTitle>Créer une nouvelle classe</DialogTitle>
+                  <DialogTitle>Créer un nouveau cours</DialogTitle>
                   <DialogDescription>
-                    Remplissez les informations pour créer une nouvelle classe.
+                    Remplissez les informations pour créer un nouveau cours.
                   </DialogDescription>
                 </DialogHeader>
                 <Form {...form}>
@@ -141,9 +195,22 @@ export default function AdminClasses() {
                       name="name"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nom de la classe</FormLabel>
+                          <FormLabel>Nom du cours</FormLabel>
                           <FormControl>
-                            <Input placeholder="Entrez le nom de la classe" {...field} />
+                            <Input placeholder="Entrez le nom du cours" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description (optionnel)</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Description" {...field} />
                           </FormControl>
                           <FormMessage />
                         </FormItem>
@@ -155,7 +222,7 @@ export default function AdminClasses() {
                         name="professor_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Professeur</FormLabel>
+                            <FormLabel>Professeur (optionnel)</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger>
@@ -163,10 +230,12 @@ export default function AdminClasses() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="1">Marie Laurent</SelectItem>
-                                <SelectItem value="2">John Smith</SelectItem>
-                                <SelectItem value="3">Sara Benali</SelectItem>
-                                <SelectItem value="4">Ahmed Mansouri</SelectItem>
+                                <SelectItem value="none">Aucun</SelectItem>
+                                {(professorsData?.data || []).map((professor) => (
+                                  <SelectItem key={professor.id} value={String(professor.id)}>
+                                    {professor.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -178,7 +247,7 @@ export default function AdminClasses() {
                         name="room_id"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Salle</FormLabel>
+                            <FormLabel>Salle (optionnel)</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
                                 <SelectTrigger>
@@ -186,10 +255,12 @@ export default function AdminClasses() {
                                 </SelectTrigger>
                               </FormControl>
                               <SelectContent>
-                                <SelectItem value="1">Salle A</SelectItem>
-                                <SelectItem value="2">Salle B</SelectItem>
-                                <SelectItem value="3">Salle C</SelectItem>
-                                <SelectItem value="4">Salle D</SelectItem>
+                                <SelectItem value="none">Aucune</SelectItem>
+                                {(roomsData?.data || []).map((room) => (
+                                  <SelectItem key={room.id} value={String(room.id)}>
+                                    {room.name}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                             <FormMessage />
@@ -197,13 +268,13 @@ export default function AdminClasses() {
                         )}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-3 gap-4">
                       <FormField
                         control={form.control}
-                        name="price"
+                        name="price_1_month"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Prix (DH)</FormLabel>
+                            <FormLabel>Prix 1 mois (DH)</FormLabel>
                             <FormControl>
                               <Input type="number" placeholder="2000" {...field} />
                             </FormControl>
@@ -213,12 +284,25 @@ export default function AdminClasses() {
                       />
                       <FormField
                         control={form.control}
-                        name="max_students"
+                        name="price_3_month"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Nombre max d'étudiants</FormLabel>
+                            <FormLabel>Prix 3 mois (DH)</FormLabel>
                             <FormControl>
-                              <Input type="number" placeholder="20" {...field} />
+                              <Input type="number" placeholder="5500" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="price_6_month"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prix 6 mois (DH)</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="10000" {...field} />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -226,11 +310,11 @@ export default function AdminClasses() {
                       />
                     </div>
                     <div className="flex justify-end gap-3">
-                      <Button type="button" variant="outline" onClick={handleModalClose}>
+                      <Button type="button" variant="outline" onClick={() => handleModalClose(false)}>
                         Annuler
                       </Button>
                       <Button type="submit" disabled={createClassMutation.isPending}>
-                        {createClassMutation.isPending ? "Création..." : "Créer la classe"}
+                        {createClassMutation.isPending ? "Création..." : "Créer le cours"}
                       </Button>
                     </div>
                   </form>
@@ -248,13 +332,13 @@ export default function AdminClasses() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                placeholder="Rechercher une classe..."
+                placeholder="Rechercher un cours..."
               />
             </div>
           </div>
           <SimpleTable
             columns={[
-              { key: "name", label: "Classe", className: "font-medium text-foreground" },
+              { key: "name", label: "Cours", className: "font-medium text-foreground" },
               { key: "professor", label: "Professeur", className: "text-muted-foreground" },
               { key: "room", label: "Salle", className: "text-muted-foreground" },
               { key: "students", label: "Étudiants" },
@@ -269,10 +353,11 @@ export default function AdminClasses() {
                 ),
               },
             ]}
-            rows={filteredClasses}
+            rows={rows}
           />
         </div>
       </div>
     </DashboardLayout>
   );
 }
+
