@@ -113,6 +113,16 @@ class SecretaryStudentsController extends Controller
             $student->classes()->sync($classIds);
         }
 
+        $loginUrl = rtrim(config('app.frontend_url'), '/') . '/login';
+        try {
+            Mail::to($student->email)->send(new AccountCreatedMail($student, $plainPassword, $loginUrl));
+        } catch (\Throwable $e) {
+            logger()->warning('Failed to send account created email (secretary api).', [
+                'userId' => $student->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'message' => 'Étudiant créé avec succès',
             'student' => [

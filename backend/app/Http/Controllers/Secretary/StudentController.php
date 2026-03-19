@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Secretary;
 
 use App\Http\Controllers\Controller;
+use App\Mail\AccountCreatedMail;
 use App\Models\Payment;
 use App\Models\SchoolClass;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class StudentController extends Controller
@@ -65,6 +67,16 @@ class StudentController extends Controller
         }
 
         $this->syncClassRelation($student);
+
+        $loginUrl = rtrim(config('app.frontend_url'), '/') . '/login';
+        try {
+            Mail::to($student->email)->send(new AccountCreatedMail($student, $validated['password'], $loginUrl));
+        } catch (\Throwable $e) {
+            logger()->warning('Failed to send account created email (secretary web).', [
+                'userId' => $student->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
 
         return redirect()->route('secretary.students.index')->with('status', 'Etudiant cree avec succes.');
     }
